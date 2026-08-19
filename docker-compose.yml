@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: shinex-crm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shinex_crm
+      POSTGRES_USER: shinex
+      POSTGRES_PASSWORD: shinex_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shinex -d shinex_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+    command: sh -c "npm run db:deploy && npm run db:generate && npm run dev -- -H 0.0.0.0"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://shinex:shinex_dev_password@db:5432/shinex_crm?schema=public
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - app_node_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+  app_node_modules:
