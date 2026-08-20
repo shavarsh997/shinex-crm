@@ -2,15 +2,52 @@ import "server-only";
 
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { NextAuthConfig } from "next-auth";
-import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 
 import { prisma } from "@/server/db/prisma";
 import { canSignInToCrm } from "./access";
+import { credentialsSchema } from "./credentials";
+import { verifyPassword } from "./password";
 
 export const authConfig = {
   trustHost: true,
   adapter: PrismaAdapter(prisma),
-  providers: [Google],
+  providers: [
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Пароль", type: "password" },
+      },
+      async authorize(credentials) {
+        const parsedCredentials = credentialsSchema.safeParse(credentials);
+
+        if (!parsedCredentials.success) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: parsedCredentials.data.email },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            passwordHash: true,
+            role: true,
+          },
+        });
+
+        if (!user?.passwordHash || !await verifyPassword(parsedCredentials.data.password, user.passwordHash)) {
+          return null;
+        }
+
+        if (!await canSignInToCrm(user.id)) {
+          return null;
+        }
+
+        return user;
+      },
+    }),
+  ],
   pages: {
     signIn: "/login",
     error: "/login",
@@ -19,13 +56,6 @@ export const authConfig = {
     strategy: "jwt",
   },
   callbacks: {
-    async signIn({ user }) {
-      if (!user.id) {
-        return false;
-      }
-
-      return canSignInToCrm(user.id);
-    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

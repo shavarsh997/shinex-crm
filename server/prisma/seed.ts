@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 
+import { hashPassword } from "../auth/password";
 import { PrismaClient } from "../generated/prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
@@ -13,6 +14,49 @@ if (!connectionString) {
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
 });
+
+const seedAccounts = {
+  administrator: {
+    name: process.env.SEED_ADMIN_NAME ?? "Администратор Shinex",
+    email: (process.env.SEED_ADMIN_EMAIL ?? "admin@shinex.local").toLowerCase(),
+    password: process.env.SEED_ADMIN_PASSWORD ?? "AdminPass!2026",
+    role: "ADMIN" as const,
+  },
+  member: {
+    name: process.env.SEED_USER_NAME ?? "Сотрудник Shinex",
+    email: (process.env.SEED_USER_EMAIL ?? "user@shinex.local").toLowerCase(),
+    password: process.env.SEED_USER_PASSWORD ?? "UserPass!2026",
+    role: "MEMBER" as const,
+  },
+};
+
+async function ensureSeedUser(account: typeof seedAccounts.administrator | typeof seedAccounts.member) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: account.email },
+    select: { passwordHash: true, approvedAt: true },
+  });
+
+  return prisma.user.upsert({
+    where: { email: account.email },
+    update: {
+      name: account.name,
+      passwordHash: existingUser?.passwordHash ?? await hashPassword(account.password),
+      role: account.role,
+      approvalStatus: "APPROVED",
+      approvalNote: null,
+      approvedAt: existingUser?.approvedAt ?? new Date(),
+    },
+    create: {
+      name: account.name,
+      email: account.email,
+      passwordHash: await hashPassword(account.password),
+      role: account.role,
+      approvalStatus: "APPROVED",
+      approvedAt: new Date(),
+    },
+    select: { id: true, email: true },
+  });
+}
 
 const projects = [
   {
@@ -70,16 +114,8 @@ const expenses = [
 ] as const;
 
 async function main() {
-  const administrator = await prisma.user.findFirst({
-    where: { role: "ADMIN", approvalStatus: "APPROVED" },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, email: true },
-  });
-
-  if (!administrator) {
-    console.log("Seed skipped: sign in with the owner Google account first, then run npm run db:seed again.");
-    return;
-  }
+  const administrator = await ensureSeedUser(seedAccounts.administrator);
+  const member = await ensureSeedUser(seedAccounts.member);
 
   await prisma.$transaction(async (transaction) => {
     await Promise.all(
@@ -99,7 +135,7 @@ async function main() {
     );
   });
 
-  console.log(`Seeded ${projects.length} projects and ${expenses.length} expenses for ${administrator.email ?? administrator.id}.`);
+  console.log(`Seeded ${projects.length} projects, ${expenses.length} expenses, administrator ${administrator.email}, and member ${member.email}.`);
 }
 
 main()

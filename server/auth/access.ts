@@ -3,7 +3,8 @@ import "server-only";
 import { prisma } from "@/server/db/prisma";
 
 // Serializes the one-time bootstrap on a new PostgreSQL database. The first
-// Google user becomes the administrator; every later user must be approved.
+// password-enabled user becomes the administrator; every later user must be approved.
+// This also lets a Google-only installation move to password sign-in.
 const accessBootstrapLock = 1_526_289_143;
 
 export function canSignInToCrm(userId: string) {
@@ -14,6 +15,7 @@ export function canSignInToCrm(userId: string) {
       where: {
         role: "ADMIN",
         approvalStatus: "APPROVED",
+        passwordHash: { not: null },
       },
       select: { id: true },
     });
