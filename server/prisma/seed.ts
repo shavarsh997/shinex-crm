@@ -40,7 +40,9 @@ async function ensureSeedUser(account: typeof seedAccounts.administrator | typeo
     where: { email: account.email },
     update: {
       name: account.name,
-      passwordHash: existingUser?.passwordHash ?? await hashPassword(account.password),
+      // Seed credentials must stay usable after changing SEED_*_PASSWORD or
+      // re-running the seed against an existing development database.
+      passwordHash: await hashPassword(account.password),
       role: account.role,
       approvalStatus: "APPROVED",
       approvalNote: null,
