@@ -5,6 +5,7 @@ export default defineConfig({
   schema: "server/prisma/schema.prisma",
   migrations: {
     path: "server/prisma/migrations",
+    seed: "jiti server/prisma/seed.ts",
   },
   datasource: {
     url: env("DATABASE_URL"),
