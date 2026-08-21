@@ -1,11 +1,13 @@
 "use client";
 
+import { CircleCheck, CircleX, Clock3, PauseCircle, Save, ShieldCheck, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
+type ButtonVariant = "default" | "outline" | "destructive";
 
 type AccessUser = {
   id: string;
@@ -29,11 +31,59 @@ const roleLabels: Record<UserRole, string> = {
   MEMBER: "Сотрудник",
 };
 
-const statusLabels: Record<ApprovalStatus, string> = {
-  PENDING: "Ожидает решения",
-  APPROVED: "Доступ разрешён",
-  REJECTED: "Доступ отклонён",
-};
+const statuses = {
+  PENDING: {
+    label: "Ожидает решения",
+    description: "Пользователь ещё не может войти в CRM.",
+    icon: Clock3,
+    className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  },
+  APPROVED: {
+    label: "Доступ активен",
+    description: "Пользователь может войти в CRM с выбранной ролью.",
+    icon: CircleCheck,
+    className: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  },
+  REJECTED: {
+    label: "Доступ отклонён",
+    description: "Пользователь не может войти, пока статус не изменится.",
+    icon: CircleX,
+    className: "border-destructive/25 bg-destructive/10 text-destructive",
+  },
+} satisfies Record<ApprovalStatus, {
+  label: string;
+  description: string;
+  icon: typeof Clock3;
+  className: string;
+}>;
+
+const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" });
+
+function actionsForStatus(status: ApprovalStatus): Array<{
+  status: ApprovalStatus;
+  label: string;
+  variant: ButtonVariant;
+  icon: typeof ShieldCheck;
+}> {
+  switch (status) {
+    case "PENDING":
+      return [
+        { status: "APPROVED", label: "Одобрить доступ", variant: "default", icon: ShieldCheck },
+        { status: "REJECTED", label: "Отклонить", variant: "destructive", icon: CircleX },
+      ];
+    case "APPROVED":
+      return [
+        { status: "APPROVED", label: "Сохранить изменения", variant: "outline", icon: Save },
+        { status: "PENDING", label: "Приостановить доступ", variant: "outline", icon: PauseCircle },
+        { status: "REJECTED", label: "Отклонить доступ", variant: "destructive", icon: CircleX },
+      ];
+    case "REJECTED":
+      return [
+        { status: "APPROVED", label: "Одобрить доступ", variant: "default", icon: ShieldCheck },
+        { status: "PENDING", label: "Вернуть на проверку", variant: "outline", icon: Undo2 },
+      ];
+  }
+}
 
 export function AccessManagement({ currentUserId, users }: {
   currentUserId: string;
@@ -48,6 +98,10 @@ export function AccessManagement({ currentUserId, users }: {
   );
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const statusCounts = rows.reduce<Record<ApprovalStatus, number>>(
+    (counts, user) => ({ ...counts, [user.approvalStatus]: counts[user.approvalStatus] + 1 }),
+    { PENDING: 0, APPROVED: 0, REJECTED: 0 },
+  );
 
   function updateDraft(userId: string, changes: Partial<EditableUser>) {
     setRows((current) => current.map((user) => (
@@ -90,25 +144,46 @@ export function AccessManagement({ currentUserId, users }: {
 
   return (
     <div className="grid gap-4">
+      <section aria-label="Сводка статусов" className="grid grid-cols-3 overflow-hidden rounded-xl border bg-card text-center text-sm">
+        {(["PENDING", "APPROVED", "REJECTED"] as const).map((status) => (
+          <div key={status} className="border-r p-3 last:border-r-0">
+            <p className="text-lg font-semibold tabular-nums">{statusCounts[status]}</p>
+            <p className="text-xs text-muted-foreground">{statuses[status].label}</p>
+          </div>
+        ))}
+      </section>
+
       {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
       {rows.map((user) => {
         const isCurrentUser = user.id === currentUserId;
         const isSaving = pendingUserId === user.id;
+        const status = statuses[user.approvalStatus];
+        const StatusIcon = status.icon;
 
         return (
           <article key={user.id} className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex flex-col justify-between gap-3 sm:flex-row">
               <div>
-                <h2 className="font-medium">{user.name || "Без имени"}</h2>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Заявка на доступ</p>
+                <h2 className="mt-1 font-medium">{user.name || "Без имени"}</h2>
                 <p className="text-sm text-muted-foreground">{user.email || "Email не указан"}</p>
-                <p className="mt-2 text-sm">{statusLabels[user.approvalStatus]}</p>
               </div>
-              <p className="text-xs text-muted-foreground">Заявка: {new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" }).format(new Date(user.createdAt))}</p>
+              <p className="text-xs text-muted-foreground">Подана: {dateFormatter.format(new Date(user.createdAt))}</p>
+            </div>
+
+            <div role="status" className={`mt-4 flex gap-3 rounded-lg border p-3 ${status.className}`}>
+              <StatusIcon className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-medium">{status.label}</p>
+                <p className="mt-0.5 text-sm opacity-90">{status.description}</p>
+                {user.approvalStatus === "APPROVED" && user.approvedAt && <p className="mt-1 text-xs opacity-80">Подтверждено: {dateFormatter.format(new Date(user.approvedAt))}</p>}
+              </div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,180px)_1fr]">
               <label className="grid gap-1 text-sm font-medium">
-                Роль
+                Роль после одобрения
                 <select
                   value={user.role}
                   disabled={isCurrentUser || isSaving}
@@ -119,13 +194,13 @@ export function AccessManagement({ currentUserId, users }: {
                 </select>
               </label>
               <label className="grid gap-1 text-sm font-medium">
-                Комментарий для пользователя
+                Сообщение пользователю
                 <input
                   value={user.approvalNote ?? ""}
                   disabled={isCurrentUser || isSaving}
                   onChange={(event) => updateDraft(user.id, { approvalNote: event.target.value || null })}
                   className="h-9 rounded-lg border bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Необязательно"
+                  placeholder="Например: доступ одобрен, добро пожаловать"
                 />
               </label>
             </div>
@@ -133,15 +208,32 @@ export function AccessManagement({ currentUserId, users }: {
             {isCurrentUser ? (
               <p className="mt-4 text-sm text-muted-foreground">Собственный доступ нельзя изменить через этот экран.</p>
             ) : (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" disabled={isSaving} onClick={() => save(user, "APPROVED")}>{isSaving ? "Сохраняем…" : "Одобрить"}</Button>
-                <Button size="sm" variant="outline" disabled={isSaving} onClick={() => save(user, "PENDING")}>Вернуть в ожидание</Button>
-                <Button size="sm" variant="destructive" disabled={isSaving} onClick={() => save(user, "REJECTED")}>Отклонить</Button>
+              <div className="mt-4">
+                <p className="mb-2 text-sm text-muted-foreground">Выберите действие — роль и сообщение сохранятся вместе с ним.</p>
+                <div className="flex flex-wrap gap-2">
+                  {actionsForStatus(user.approvalStatus).map((action) => {
+                    const ActionIcon = action.icon;
+
+                    return (
+                      <Button
+                        key={action.status}
+                        size="sm"
+                        variant={action.variant}
+                        disabled={isSaving}
+                        onClick={() => save(user, action.status)}
+                      >
+                        <ActionIcon aria-hidden="true" />
+                        {isSaving ? "Сохраняем…" : action.label}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </article>
         );
       })}
+
       {rows.length === 0 && <p className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Заявок на доступ пока нет.</p>}
     </div>
   );

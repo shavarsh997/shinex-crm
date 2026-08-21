@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AppError } from "@/server/shared/errors";
+import { AppError, TooManyRequestsError } from "@/server/shared/errors";
 
 export type Controller<TContext = undefined> = (
   request: Request,
@@ -15,7 +15,7 @@ export function withErrorHandling<TContext>(
       return await controller(request, context);
     } catch (error) {
       if (error instanceof AppError) {
-        return Response.json(
+        const response = Response.json(
           {
             error: {
               code: error.code,
@@ -25,6 +25,12 @@ export function withErrorHandling<TContext>(
           },
           { status: error.statusCode },
         );
+
+        if (error instanceof TooManyRequestsError) {
+          response.headers.set("Retry-After", String(error.retryAfterSeconds));
+        }
+
+        return response;
       }
 
       console.error("Unhandled server error", error);

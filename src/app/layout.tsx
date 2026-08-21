@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
 import "./globals.css";
 
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const manrope = Manrope({
-  subsets: ["cyrillic", "latin"],
-  display: "swap",
-  variable: "--font-manrope",
-});
 
 export const metadata: Metadata = {
   title: "Shinex CRM",
@@ -19,13 +12,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ru"
-      className={`${manrope.variable} h-full antialiased`}
+      className="h-full antialiased"
       suppressHydrationWarning
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: "(function(){try{var theme=localStorage.getItem('shinex-theme');document.documentElement.classList.toggle('dark',theme==='dark')}catch(error){}})()",
+            __html: "(function(){try{var theme=localStorage.getItem('shinex-theme');var dark=theme?theme==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',dark)}catch(error){}})()",
           }}
         />
       </head>

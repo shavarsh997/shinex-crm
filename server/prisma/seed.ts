@@ -30,6 +30,21 @@ const seedAccounts = {
   },
 };
 
+function assertSafeSeedConfiguration() {
+  if (process.env.NODE_ENV !== "production") return;
+
+  if (process.env.ALLOW_PRODUCTION_SEED !== "true") {
+    throw new Error("Refusing to seed production. Set ALLOW_PRODUCTION_SEED=true only for an intentional seed run.");
+  }
+
+  if (
+    seedAccounts.administrator.password === "AdminPass!2026"
+    || seedAccounts.member.password === "UserPass!2026"
+  ) {
+    throw new Error("Production seed credentials must be provided through SEED_*_PASSWORD variables.");
+  }
+}
+
 async function ensureSeedUser(account: typeof seedAccounts.administrator | typeof seedAccounts.member) {
   const existingUser = await prisma.user.findUnique({
     where: { email: account.email },
@@ -116,6 +131,7 @@ const expenses = [
 ] as const;
 
 async function main() {
+  assertSafeSeedConfiguration();
   const administrator = await ensureSeedUser(seedAccounts.administrator);
   const member = await ensureSeedUser(seedAccounts.member);
 

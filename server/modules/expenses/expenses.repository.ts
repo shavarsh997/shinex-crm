@@ -11,7 +11,7 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
       id: expenseId,
       project: { userId },
     },
-    select: { id: true, projectId: true },
+    select: { id: true, projectId: true, amount: true },
   });
 }
 
@@ -37,19 +37,13 @@ export function deleteExpense(db: DbClient, expenseId: string) {
   return db.expense.delete({ where: { id: expenseId } });
 }
 
-export async function getProjectExpenseTotal(db: DbClient, projectId: string) {
-  const result = await db.expense.aggregate({
-    where: { projectId },
-    _sum: { amount: true },
-  });
-
-  return result._sum.amount ?? 0n;
-}
-
-export function updateProjectSpentAmount(
+export function changeProjectSpentAmount(
   db: DbClient,
   projectId: string,
-  spentAmount: bigint,
+  amountDelta: bigint,
 ) {
-  return db.project.update({ where: { id: projectId }, data: { spentAmount } });
+  return db.project.update({
+    where: { id: projectId },
+    data: { spentAmount: { increment: amountDelta } },
+  });
 }

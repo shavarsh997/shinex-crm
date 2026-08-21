@@ -4,11 +4,15 @@ import { ExpenseType } from "@/server/generated/prisma/client";
 import { z } from "zod";
 
 const optionalText = z.string().trim().max(2_000).optional().transform((value) => value || undefined);
+const MAX_MONEY = 9_223_372_036_854_775_807n;
+const money = z.coerce.bigint()
+  .refine((value) => value > 0n, "Сумма должна быть больше нуля.")
+  .refine((value) => value <= MAX_MONEY, "Сумма превышает допустимый предел.");
 
 export const createExpenseSchema = z.object({
   type: z.enum(ExpenseType),
   title: z.string().trim().min(1, "Укажите название расхода.").max(160),
-  amount: z.coerce.bigint().refine((value) => value > 0n, "Сумма должна быть больше нуля."),
+  amount: money,
   date: z.coerce.date(),
   description: optionalText,
   employeeName: z.string().trim().max(160).optional().transform((value) => value || undefined),

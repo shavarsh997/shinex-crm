@@ -1,7 +1,6 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import type { Prisma } from "@/server/generated/prisma/client";
 import { NotFoundError } from "@/server/shared/errors";
 
 import { findProjectForUser } from "../projects/projects.repository";
@@ -10,18 +9,9 @@ import {
   createExpense,
   deleteExpense,
   findExpenseForUser,
-  getProjectExpenseTotal,
   updateExpense,
-  updateProjectSpentAmount,
+  changeProjectSpentAmount,
 } from "./expenses.repository";
-
-async function recalculateSpentAmount(
-  projectId: string,
-  tx: Prisma.TransactionClient,
-) {
-  const spentAmount = await getProjectExpenseTotal(tx, projectId);
-  await updateProjectSpentAmount(tx, projectId, spentAmount);
-}
 
 export async function addProjectExpense(
   userId: string,
@@ -36,7 +26,7 @@ export async function addProjectExpense(
     }
 
     const expense = await createExpense(tx, projectId, input);
-    await recalculateSpentAmount(projectId, tx);
+    await changeProjectSpentAmount(tx, projectId, expense.amount);
 
     return expense;
   });
@@ -55,7 +45,7 @@ export async function updateProjectExpense(
     }
 
     const updatedExpense = await updateExpense(tx, expenseId, input);
-    await recalculateSpentAmount(expense.projectId, tx);
+    await changeProjectSpentAmount(tx, expense.projectId, updatedExpense.amount - expense.amount);
 
     return updatedExpense;
   });
@@ -70,6 +60,6 @@ export async function deleteProjectExpense(userId: string, expenseId: string) {
     }
 
     await deleteExpense(tx, expenseId);
-    await recalculateSpentAmount(expense.projectId, tx);
+    await changeProjectSpentAmount(tx, expense.projectId, -expense.amount);
   });
 }

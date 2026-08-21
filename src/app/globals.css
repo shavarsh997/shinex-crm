@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -128,5 +128,40 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* The dashboard's visual design includes Slate utility classes. Re-map these
+   light-only colors to the semantic palette whenever dark mode is active. */
+@layer utilities {
+  .dark .bg-white {
+    background-color: var(--card);
+  }
+
+  .dark .bg-slate-50,
+  .dark .bg-slate-100 {
+    background-color: var(--muted);
+  }
+
+  .dark .text-slate-950,
+  .dark .text-slate-900,
+  .dark .text-slate-800,
+  .dark .text-slate-700,
+  .dark .text-slate-600 {
+    color: var(--foreground);
+  }
+
+  .dark .text-slate-500,
+  .dark .text-slate-400 {
+    color: var(--muted-foreground);
+  }
+
+  .dark .border-slate-100,
+  .dark .border-slate-200 {
+    border-color: var(--border);
+  }
+
+  .dark .ring-slate-200\/80 {
+    --tw-ring-color: var(--border);
   }
 }

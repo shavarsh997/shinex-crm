@@ -7,11 +7,12 @@ The project uses Next.js, Prisma ORM 7, and PostgreSQL running in Docker.
 1. Start Docker Desktop.
 2. Copy the local configuration: `cp .env.example .env`
 3. Run `npm run docker:up` (or `docker compose up --build`).
-4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`.
-5. In Google Cloud Console, add `http://localhost:3000/api/auth/callback/google` to the OAuth application's authorised redirect URIs.
-6. Open [http://localhost:3000](http://localhost:3000) and sign in with the owner's Google account first.
+4. Seed the development accounts: `npm run db:seed`.
+5. Open [http://localhost:3001](http://localhost:3001) and sign in with `admin@shinex.local` / `AdminPass!2026`.
 
-The app waits for PostgreSQL, applies the committed migrations, generates Prisma Client, and then starts Next.js. The first Google user in an empty database becomes the administrator. Stop the stack with `npm run docker:down`. Your PostgreSQL data remains in the `postgres_data` Docker volume.
+The development container waits for PostgreSQL, applies the committed migrations, generates Prisma Client, and then starts Next.js. Stop the stack with `npm run docker:down`. Your PostgreSQL data remains in the `postgres_data` Docker volume.
+
+The default `Dockerfile` target is a production image: it builds Next.js once and starts it with `node server.js`. Apply migrations with `npm run db:deploy` as a separate deployment step; do not run the demo seed in production.
 
 ### Run Next.js on your computer, PostgreSQL in Docker
 
@@ -22,7 +23,7 @@ The app waits for PostgreSQL, applies the committed migrations, generates Prisma
 5. Generate the Prisma client: `npm run db:generate`
 6. Start the application: `npm run dev`
 
-After the owner signs in and becomes the first administrator, run `npm run db:seed` to add three realistic demo projects and their expenses to that administrator's dashboard. The seed is idempotent: it only updates records with its fixed `seed-*` IDs and never changes roles or approval states.
+Run `npm run db:seed` to create the default administrator and member, plus three realistic demo projects and their expenses. The seed is idempotent; it refreshes only its fixed `seed-*` records and the two configured development accounts.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -40,10 +41,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Access control
 
-- Authentication is available only through Google OAuth; the local email/password provider has been removed.
-- On an empty database, the first Google sign-in becomes the initial `ADMIN`. Every later Google user is created with the `PENDING` status and cannot access the CRM until an administrator approves it on **Доступы**.
-- Administrators can set the `ADMIN`, `MANAGER`, or `MEMBER` role, approve, return to pending, or reject an account. Only an `ADMIN` can call the corresponding API endpoints.
-- Roles and approval state are stored in PostgreSQL. No email address is privileged by environment configuration.
+- Authentication uses email and password. The seed creates `admin@shinex.local` / `AdminPass!2026` and `user@shinex.local` / `UserPass!2026`; override these only with `SEED_*` variables in a non-shared development environment.
+- A successful login creates one opaque, `HttpOnly` session token. It is valid for exactly 37 days and is not refreshed or exchanged for another token.
+- Every registration starts with `PENDING` status. A user cannot sign in or use the CRM until an administrator approves the account on **Доступы**. Create the initial administrator with `npm run db:seed`.
+- Administrators can set the `ADMIN`, `MANAGER`, or `MEMBER` role, approve, return to pending, or reject an account. `ADMIN` and `MANAGER` can create and edit their own projects; `MEMBER` has read-only access to their own projects. Only an `ADMIN` can call the access-management API endpoints.
+- Roles and approval state are stored in PostgreSQL.
 
 The local Docker database is intentionally development-only; use distinct credentials and a managed PostgreSQL instance in production.
 
@@ -53,11 +55,11 @@ The local Docker database is intentionally development-only; use distinct creden
 - `src/components`, `src/hooks`, and `src/lib` contain client and shared UI code.
 - `server/db` owns the Prisma client and database connection.
 - `server/prisma` contains the Prisma schema and migrations.
-- `server/auth` owns Auth.js configuration, guards, and the public server API.
+- `server/auth` owns password verification, the single-token session, guards, and the public server API.
 - `server/modules` contains self-contained business features, including projects, expenses, and user access management.
 - `server/shared` provides typed errors, Zod parsing, HTTP error handling, and cursor pagination for server modules.
 
-The Auth.js Route Handler is intentionally thin and delegates to `@/server/auth`; Google is the only configured provider.
+`POST /api/auth/login` verifies email/password and sets the only authentication cookie. The session is checked against PostgreSQL for every protected request.
 
 ## Next.js
 

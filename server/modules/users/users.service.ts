@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import { ForbiddenError, NotFoundError } from "@/server/shared/errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "@/server/shared/errors";
 
 import type { UpdateUserAccessInput } from "./users.schema";
 
@@ -35,21 +35,43 @@ export async function updateUserAccess(
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true },
+    select: { id: true, role: true, approvalStatus: true },
   });
 
   if (!user) {
     throw new NotFoundError("Пользователь");
   }
 
-  return prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: input.role,
-      approvalStatus: input.approvalStatus,
-      approvalNote: input.approvalNote,
-      approvedAt: input.approvalStatus === "APPROVED" ? new Date() : null,
-    },
-    select: accessUserSelect,
+  const revokesLastApprovedAdmin = user.role === "ADMIN"
+    && user.approvalStatus === "APPROVED"
+    && (input.role !== "ADMIN" || input.approvalStatus !== "APPROVED");
+
+  if (revokesLastApprovedAdmin) {
+    const approvedAdminCount = await prisma.user.count({
+      where: { role: "ADMIN", approvalStatus: "APPROVED" },
+    });
+
+    if (approvedAdminCount <= 1) {
+      throw new ConflictError("Нельзя отозвать доступ у последнего активного администратора.");
+    }
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const updatedUser = await transaction.user.update({
+      where: { id: userId },
+      data: {
+        role: input.role,
+        approvalStatus: input.approvalStatus,
+        approvalNote: input.approvalNote,
+        approvedAt: input.approvalStatus === "APPROVED" ? new Date() : null,
+      },
+      select: accessUserSelect,
+    });
+
+    if (input.approvalStatus !== "APPROVED") {
+      await transaction.session.deleteMany({ where: { userId } });
+    }
+
+    return updatedUser;
   });
 }

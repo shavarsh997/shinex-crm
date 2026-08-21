@@ -20,8 +20,8 @@ export function ThemeToggle() {
       aria-label="Переключить светлую и тёмную тему"
       title="Переключить тему"
     >
-      <Sun className="size-5 dark:hidden" aria-hidden="true" />
-      <Moon className="hidden size-5 dark:block" aria-hidden="true" />
+      <Sun className="hidden size-5 dark:block" aria-hidden="true" />
+      <Moon className="size-5 dark:hidden" aria-hidden="true" />
     </button>
   );
 }

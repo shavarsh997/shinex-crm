@@ -2,29 +2,12 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/server/db/prisma";
 import { ForbiddenError, UnauthorizedError } from "@/server/shared/errors";
 
-import { auth } from "./service";
+import { getSessionUser } from "./service";
 
 export async function getCurrentUser() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      approvalStatus: true,
-      approvalNote: true,
-    },
-  });
+  const user = await getSessionUser();
 
   return user?.approvalStatus === "APPROVED" ? user : null;
 }
@@ -44,6 +27,16 @@ export async function requireAdmin() {
 
   if (user.role !== "ADMIN") {
     throw new ForbiddenError("Подтверждать пользователей может только администратор.");
+  }
+
+  return user;
+}
+
+export async function requireProjectEditor() {
+  const user = await requireUser();
+
+  if (user.role === "MEMBER") {
+    throw new ForbiddenError("Редактировать проекты могут только менеджеры и администраторы.");
   }
 
   return user;

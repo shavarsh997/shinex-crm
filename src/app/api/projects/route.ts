@@ -1,4 +1,4 @@
-import { requireUser } from "@/server/auth";
+import { requireProjectEditor, requireUser } from "@/server/auth";
 import { createProjectSchema } from "@/server/modules/projects/projects.schema";
 import { createProjectForUser, getUserProjects } from "@/server/modules/projects/projects.service";
 import { serializeProject } from "@/server/shared/serializers/financial";
@@ -13,7 +13,7 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (request) => {
-  const user = await requireUser();
+  const user = await requireProjectEditor();
   const input = await parseRequestBody(request, createProjectSchema);
   const project = await createProjectForUser(user.id, input);
 

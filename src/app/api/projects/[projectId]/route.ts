@@ -1,4 +1,4 @@
-import { requireUser } from "@/server/auth";
+import { requireProjectEditor, requireUser } from "@/server/auth";
 import { updateProjectSchema } from "@/server/modules/projects/projects.schema";
 import { getUserProject, updateProjectForUser } from "@/server/modules/projects/projects.service";
 import { withErrorHandling } from "@/server/shared/http";
@@ -19,7 +19,7 @@ export const GET = withErrorHandling(async (_request, context: ProjectRouteConte
 });
 
 export const PATCH = withErrorHandling(async (request, context: ProjectRouteContext) => {
-  const user = await requireUser();
+  const user = await requireProjectEditor();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, updateProjectSchema);
   const project = await updateProjectForUser(user.id, projectId, input);

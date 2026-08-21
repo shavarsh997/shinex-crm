@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight, BarChart3, WalletCards } from "lucide-rea
 import { getAuthenticatedUser } from "@/server/auth";
 import { getUserProjects } from "@/server/modules/projects/projects.service";
 
-const compact = (amount: bigint) => `${new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 }).format(Number(amount))} AMD`;
+const compact = (amount: bigint) => `${new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 }).format(amount)} AMD`;
 
 export default async function FinancePage() {
   const user = await getAuthenticatedUser();

@@ -19,6 +19,9 @@ export function findProjectByIdForUser(projectId: string, userId: string) {
       expenses: {
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       },
+      payments: {
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      },
     },
   });
 }
