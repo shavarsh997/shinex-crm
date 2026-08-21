@@ -1,10 +1,36 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import { NotFoundError, ValidationError } from "@/server/shared/errors";
+import { ConflictError, NotFoundError, ValidationError } from "@/server/shared/errors";
+import {
+  createCursorPage,
+  toPrismaCursorPagination,
+  type CursorPaginationInput,
+} from "@/server/shared/pagination";
 
-import { findProjectForEditor } from "../projects/projects.repository";
+import { findProjectForEditor, findProjectForUser } from "../projects/projects.repository";
 import type { CreateBudgetAdjustmentInput } from "./budget.schema";
+
+export async function getProjectBudgetAdjustmentPage(
+  userId: string,
+  projectId: string,
+  pagination: CursorPaginationInput,
+) {
+  const project = await findProjectForUser(prisma, projectId, userId);
+  if (!project) throw new NotFoundError("Проект");
+
+  const where = { projectId };
+  const [adjustments, totalCount] = await Promise.all([
+    prisma.budgetAdjustment.findMany({
+      where,
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      ...toPrismaCursorPagination(pagination),
+    }),
+    prisma.budgetAdjustment.count({ where }),
+  ]);
+
+  return { ...createCursorPage(adjustments, pagination.limit), totalCount };
+}
 
 export async function addBudgetAdjustment(
   userId: string,
@@ -16,6 +42,10 @@ export async function addBudgetAdjustment(
 
     if (!project) {
       throw new NotFoundError("Проект");
+    }
+
+    if (project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя менять бюджет неактивного проекта.");
     }
 
     if (input.type === "DECREASE" && input.amount > project.estimatedAmount) {

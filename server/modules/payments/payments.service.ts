@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import { NotFoundError } from "@/server/shared/errors";
+import { ConflictError, NotFoundError } from "@/server/shared/errors";
 
 import { findProjectForEditor } from "../projects/projects.repository";
 import type { CreatePaymentInput } from "./payments.schema";
@@ -16,6 +16,10 @@ export async function addProjectPayment(
 
     if (!project) {
       throw new NotFoundError("Проект");
+    }
+
+    if (project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя добавлять поступления в неактивный проект.");
     }
 
     const payment = await transaction.payment.create({

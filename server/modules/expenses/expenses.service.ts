@@ -1,9 +1,15 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import { NotFoundError } from "@/server/shared/errors";
+import { ExpenseType, type Prisma } from "@/server/generated/prisma/client";
+import { ConflictError, NotFoundError } from "@/server/shared/errors";
+import {
+  createCursorPage,
+  toPrismaCursorPagination,
+  type CursorPaginationInput,
+} from "@/server/shared/pagination";
 
-import { findProjectForEditor } from "../projects/projects.repository";
+import { findProjectForEditor, findProjectForUser } from "../projects/projects.repository";
 import type { CreateExpenseInput, UpdateExpenseInput } from "./expenses.schema";
 import {
   createExpense,
@@ -12,6 +18,39 @@ import {
   updateExpense,
   changeProjectSpentAmount,
 } from "./expenses.repository";
+
+export const expenseListSorts = ["newest", "oldest", "highest", "lowest"] as const;
+export type ExpenseListSort = (typeof expenseListSorts)[number];
+
+const expenseOrderBy: Record<ExpenseListSort, Prisma.ExpenseOrderByWithRelationInput[]> = {
+  newest: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+  oldest: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+  highest: [{ amount: "desc" }, { id: "desc" }],
+  lowest: [{ amount: "asc" }, { id: "asc" }],
+};
+
+export async function getProjectExpensePage(
+  userId: string,
+  projectId: string,
+  pagination: CursorPaginationInput,
+  type: ExpenseType | undefined,
+  sort: ExpenseListSort,
+) {
+  const project = await findProjectForUser(prisma, projectId, userId);
+  if (!project) throw new NotFoundError("Проект");
+
+  const where = { projectId, ...(type ? { type } : {}) };
+  const [expenses, totalCount] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      orderBy: expenseOrderBy[sort],
+      ...toPrismaCursorPagination(pagination),
+    }),
+    prisma.expense.count({ where }),
+  ]);
+
+  return { ...createCursorPage(expenses, pagination.limit), totalCount };
+}
 
 export async function addProjectExpense(
   userId: string,
@@ -23,6 +62,10 @@ export async function addProjectExpense(
 
     if (!project) {
       throw new NotFoundError("Проект");
+    }
+
+    if (project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя добавлять расходы в неактивный проект.");
     }
 
     const expense = await createExpense(tx, projectId, input);
@@ -44,6 +87,10 @@ export async function updateProjectExpense(
       throw new NotFoundError("Расход");
     }
 
+    if (expense.project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя изменять расходы неактивного проекта.");
+    }
+
     const updatedExpense = await updateExpense(tx, expenseId, input);
     await changeProjectSpentAmount(tx, expense.projectId, updatedExpense.amount - expense.amount);
 
@@ -57,6 +104,10 @@ export async function deleteProjectExpense(userId: string, expenseId: string) {
 
     if (!expense) {
       throw new NotFoundError("Расход");
+    }
+
+    if (expense.project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя удалять расходы неактивного проекта.");
     }
 
     await deleteExpense(tx, expenseId);

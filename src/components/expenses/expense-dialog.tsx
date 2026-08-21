@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, Plus, ReceiptText, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { ExpenseView } from "./expense-list";
 
@@ -54,7 +54,7 @@ export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact 
 
   return <Dialog open={isOpen} onOpenChange={changeOpen}>
     {!expense && <DialogTrigger render={<Button size={compact ? "icon" : "lg"} className={compact ? "size-12 rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-900/20 dark:bg-primary dark:text-primary-foreground" : "h-12 rounded-2xl bg-slate-950 px-4 text-sm text-white shadow-lg shadow-slate-900/15 dark:bg-primary dark:text-primary-foreground"} />}><Plus className="size-4" />{!compact && "Добавить расход"}</DialogTrigger>}
-    <DialogContent className="bottom-0 top-auto max-h-[92vh] max-w-none translate-y-0 gap-5 overflow-y-auto rounded-b-none rounded-t-[28px] p-5 pb-8 sm:bottom-1/2 sm:max-w-lg sm:-translate-y-1/2 sm:rounded-[28px] sm:p-7">
+    <ResponsiveDialogContent className="gap-5 p-5 pb-8 sm:p-7">
       <DialogHeader><DialogTitle className="text-xl tracking-[-0.035em]">{expense ? "Изменить расход" : "Новый расход"}</DialogTitle><DialogDescription>{isSalary ? "Укажите сумму и сотрудника, который получил зарплату." : "Заполните главное — детали можно добавить позже."}</DialogDescription></DialogHeader>
       <form action={submit} className="grid gap-5">
         <label className="grid gap-2 text-sm font-semibold text-slate-700">Сумма, AMD<div className="relative"><Input required name="amount" inputMode="numeric" defaultValue={expense?.amount} placeholder="0" className="h-16 rounded-2xl border-slate-200 pr-14 text-3xl font-semibold tracking-[-0.05em]" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">AMD</span></div></label>
@@ -67,6 +67,6 @@ export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button type="submit" size="lg" className="h-13 rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700" disabled={pending}>{pending ? "Сохраняем…" : expense ? "Сохранить изменения" : "Сохранить расход"}</Button>
       </form>
-    </DialogContent>
+    </ResponsiveDialogContent>
   </Dialog>;
 }

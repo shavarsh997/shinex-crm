@@ -5,6 +5,20 @@ import type { Prisma } from "@/server/generated/prisma/client";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
+const projectSummaryInclude = {
+  user: {
+    select: { id: true, name: true, email: true },
+  },
+  members: {
+    include: {
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  },
+} as const;
+
 export function findProjectsByUserId(userId: string) {
   return prisma.project.findMany({
     where: {
@@ -42,6 +56,16 @@ export function findProjectByIdForUser(projectId: string, userId: string) {
         orderBy: { createdAt: "asc" },
       },
     },
+  });
+}
+
+export function findProjectSummaryByIdForUser(projectId: string, userId: string) {
+  return prisma.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+    include: projectSummaryInclude,
   });
 }
 

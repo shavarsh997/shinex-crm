@@ -16,7 +16,7 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
         ],
       },
     },
-    select: { id: true, projectId: true, amount: true },
+    select: { id: true, projectId: true, amount: true, project: { select: { status: true } } },
   });
 }
 

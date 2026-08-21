@@ -143,6 +143,27 @@
     background-color: var(--muted);
   }
 
+  .dark .bg-blue-50 {
+    background-color: oklch(0.25 0.045 260);
+  }
+
+  .dark .bg-emerald-50 {
+    background-color: oklch(0.25 0.045 155);
+  }
+
+  .dark .bg-rose-50 {
+    background-color: oklch(0.25 0.045 20);
+  }
+
+  .dark .bg-violet-50 {
+    background-color: oklch(0.25 0.045 300);
+  }
+
+  .dark .bg-amber-50,
+  .dark .bg-amber-100 {
+    background-color: oklch(0.27 0.045 80);
+  }
+
   .dark .text-slate-950,
   .dark .text-slate-900,
   .dark .text-slate-800,
@@ -156,6 +177,34 @@
     color: var(--muted-foreground);
   }
 
+  .dark .text-blue-600,
+  .dark .text-blue-700,
+  .dark .text-blue-800 {
+    color: oklch(0.78 0.12 260);
+  }
+
+  .dark .text-emerald-600,
+  .dark .text-emerald-700,
+  .dark .text-emerald-800 {
+    color: oklch(0.8 0.11 155);
+  }
+
+  .dark .text-rose-600,
+  .dark .text-rose-700,
+  .dark .text-rose-800 {
+    color: oklch(0.8 0.12 20);
+  }
+
+  .dark .text-violet-600,
+  .dark .text-violet-700 {
+    color: oklch(0.8 0.12 300);
+  }
+
+  .dark .text-amber-600,
+  .dark .text-amber-700 {
+    color: oklch(0.83 0.12 80);
+  }
+
   .dark .border-slate-100,
   .dark .border-slate-200 {
     border-color: var(--border);
@@ -163,5 +212,18 @@
 
   .dark .ring-slate-200\/80 {
     --tw-ring-color: var(--border);
+  }
+
+  /* Custom action buttons use saturated or dark utility backgrounds. The
+     default Button foreground follows the semantic primary color, which is
+     intentionally dark in this theme and therefore loses contrast here. */
+  .dark [data-slot="button"]:is(
+    .bg-slate-950,
+    .bg-slate-900,
+    .bg-blue-600,
+    .bg-emerald-600,
+    .bg-violet-600
+  ) {
+    color: oklch(0.985 0 0);
   }
 }
