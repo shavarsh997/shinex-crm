@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/server/db/prisma";
 import { NotFoundError } from "@/server/shared/errors";
 
-import { findProjectForUser } from "../projects/projects.repository";
+import { findProjectForEditor } from "../projects/projects.repository";
 import type { CreatePaymentInput } from "./payments.schema";
 
 export async function addProjectPayment(
@@ -12,7 +12,7 @@ export async function addProjectPayment(
   input: CreatePaymentInput,
 ) {
   return prisma.$transaction(async (transaction) => {
-    const project = await findProjectForUser(transaction, projectId, userId);
+    const project = await findProjectForEditor(transaction, projectId, userId);
 
     if (!project) {
       throw new NotFoundError("Проект");

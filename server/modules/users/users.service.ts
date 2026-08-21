@@ -24,6 +24,14 @@ export function getUsersForAccessManagement() {
   });
 }
 
+export function getApprovedUsersForProjectAccess(excludeUserId: string) {
+  return prisma.user.findMany({
+    where: { approvalStatus: "APPROVED", id: { not: excludeUserId } },
+    select: { id: true, name: true, email: true },
+    orderBy: [{ name: "asc" }, { email: "asc" }],
+  });
+}
+
 export async function updateUserAccess(
   administratorId: string,
   userId: string,

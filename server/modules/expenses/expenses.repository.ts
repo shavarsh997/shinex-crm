@@ -9,7 +9,12 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
   return db.expense.findFirst({
     where: {
       id: expenseId,
-      project: { userId },
+      project: {
+        OR: [
+          { userId },
+          { members: { some: { userId, role: "EDITOR" } } },
+        ],
+      },
     },
     select: { id: true, projectId: true, amount: true },
   });

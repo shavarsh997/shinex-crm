@@ -29,6 +29,22 @@ enum ExpenseType {
   OTHER
 }
 
+enum BudgetAdjustmentType {
+  INCREASE
+  DECREASE
+}
+
+enum ProjectMemberRole {
+  EDITOR
+  VIEWER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -42,6 +58,8 @@ model User {
   approvedAt    DateTime?
   sessions      Session[]
   projects      Project[]
+  projectMemberships ProjectMember[]
+  createdTasks     Task[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -63,6 +81,9 @@ model Project {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses        Expense[]
   payments        Payment[]
+  budgetAdjustments BudgetAdjustment[]
+  members         ProjectMember[]
+  tasks           Task[]
 
   @@index([userId, createdAt])
 }
@@ -96,6 +117,50 @@ model Payment {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, date])
+}
+
+model BudgetAdjustment {
+  id        String               @id @default(cuid())
+  projectId String
+  type      BudgetAdjustmentType
+  amount    BigInt
+  date      DateTime
+  notes     String?              @db.Text
+  createdAt DateTime             @default(now())
+  project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, date])
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  role      ProjectMemberRole @default(EDITOR)
+  createdAt DateTime          @default(now())
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  createdById  String
+  projectId    String?
+  title        String
+  description  String?    @db.Text
+  employeeName String?
+  status       TaskStatus @default(TODO)
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([createdById, status, updatedAt])
+  @@index([projectId, status])
 }
 
 model Session {

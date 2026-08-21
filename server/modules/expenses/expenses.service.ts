@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/server/db/prisma";
 import { NotFoundError } from "@/server/shared/errors";
 
-import { findProjectForUser } from "../projects/projects.repository";
+import { findProjectForEditor } from "../projects/projects.repository";
 import type { CreateExpenseInput, UpdateExpenseInput } from "./expenses.schema";
 import {
   createExpense,
@@ -19,7 +19,7 @@ export async function addProjectExpense(
   input: CreateExpenseInput,
 ) {
   return prisma.$transaction(async (tx) => {
-    const project = await findProjectForUser(tx, projectId, userId);
+    const project = await findProjectForEditor(tx, projectId, userId);
 
     if (!project) {
       throw new NotFoundError("Проект");

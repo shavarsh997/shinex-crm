@@ -8,7 +8,7 @@ import { formatMoney } from "@/lib/money";
 import { ExpenseDialog } from "./expense-dialog";
 
 export type ExpenseView = { id: string; type: "EMPLOYEE" | "MATERIAL" | "FUEL" | "TRANSPORT" | "EQUIPMENT" | "SERVICE" | "OTHER"; title: string; amount: string; date: string; description: string | null; employeeName: string | null; vendorName: string | null; notes: string | null };
-const labels: Record<ExpenseView["type"], string> = { EMPLOYEE: "Сотрудники", MATERIAL: "Материалы", FUEL: "Топливо", TRANSPORT: "Транспорт", EQUIPMENT: "Оборудование", SERVICE: "Услуги", OTHER: "Другое" };
+const labels: Record<ExpenseView["type"], string> = { EMPLOYEE: "Зарплата", MATERIAL: "Материалы", FUEL: "Топливо", TRANSPORT: "Транспорт", EQUIPMENT: "Оборудование", SERVICE: "Услуги", OTHER: "Другое" };
 
 export function ExpenseList({ projectId, expenses, canEdit }: { projectId: string; expenses: ExpenseView[]; canEdit: boolean }) {
   const router = useRouter(); const [type, setType] = useState<"ALL" | ExpenseView["type"]>("ALL"); const [sort, setSort] = useState("newest"); const [editing, setEditing] = useState<ExpenseView | null>(null); const [deleting, setDeleting] = useState<string | null>(null);

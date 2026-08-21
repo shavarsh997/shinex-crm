@@ -7,20 +7,39 @@ type DbClient = typeof prisma | Prisma.TransactionClient;
 
 export function findProjectsByUserId(userId: string) {
   return prisma.project.findMany({
-    where: { userId },
+    where: {
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
     orderBy: { updatedAt: "desc" },
   });
 }
 
 export function findProjectByIdForUser(projectId: string, userId: string) {
   return prisma.project.findFirst({
-    where: { id: projectId, userId },
+    where: {
+      id: projectId,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
     include: {
+      user: {
+        select: { id: true, name: true, email: true },
+      },
       expenses: {
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       },
       payments: {
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      },
+      budgetAdjustments: {
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      },
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -28,7 +47,22 @@ export function findProjectByIdForUser(projectId: string, userId: string) {
 
 export function findProjectForUser(db: DbClient, projectId: string, userId: string) {
   return db.project.findFirst({
-    where: { id: projectId, userId },
+    where: {
+      id: projectId,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
+  });
+}
+
+export function findProjectForEditor(db: DbClient, projectId: string, userId: string) {
+  return db.project.findFirst({
+    where: {
+      id: projectId,
+      OR: [
+        { userId },
+        { members: { some: { userId, role: "EDITOR" } } },
+      ],
+    },
   });
 }
 

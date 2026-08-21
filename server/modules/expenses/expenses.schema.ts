@@ -9,7 +9,7 @@ const money = z.coerce.bigint()
   .refine((value) => value > 0n, "Сумма должна быть больше нуля.")
   .refine((value) => value <= MAX_MONEY, "Сумма превышает допустимый предел.");
 
-export const createExpenseSchema = z.object({
+const expenseFields = z.object({
   type: z.enum(ExpenseType),
   title: z.string().trim().min(1, "Укажите название расхода.").max(160),
   amount: money,
@@ -20,7 +20,12 @@ export const createExpenseSchema = z.object({
   notes: optionalText,
 });
 
-export const updateExpenseSchema = createExpenseSchema.partial().refine(
+export const createExpenseSchema = expenseFields.refine(
+  (value) => value.type !== "EMPLOYEE" || Boolean(value.employeeName),
+  { message: "Укажите сотрудника, получившего зарплату.", path: ["employeeName"] },
+);
+
+export const updateExpenseSchema = expenseFields.partial().refine(
   (value) => Object.keys(value).length > 0,
   "Передайте хотя бы одно поле для обновления.",
 );

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, FolderKanban, Plus, UserRound, Zap } from "lucide-react";
+import { BarChart3, FolderKanban, ListTodo, Plus, UserRound, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const links = [
   { href: "/dashboard", label: "Проекты", icon: FolderKanban },
+  { href: "/dashboard/tasks", label: "Задачи", icon: ListTodo },
   { href: "/dashboard/activity", label: "Активность", icon: Zap },
   { href: "/dashboard/finance", label: "Финансы", icon: BarChart3 },
   { href: "/dashboard/profile", label: "Профиль", icon: UserRound },
@@ -17,7 +18,7 @@ export function MobileNavigation({ canCreateProject }: { canCreateProject: boole
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/90 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5 items-end">
+      <div className="mx-auto grid max-w-md grid-cols-6 items-end">
         {links.slice(0, 2).map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium ${pathname === href ? "text-blue-600" : "text-muted-foreground"}`}>
             <Icon className="size-[19px]" strokeWidth={pathname === href ? 2.5 : 1.9} />
