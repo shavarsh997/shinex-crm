@@ -85,6 +85,7 @@ model Project {
   estimatedAmount BigInt    @default(0)
   receivedAmount  BigInt    @default(0)
   spentAmount     BigInt    @default(0)
+  deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -96,6 +97,7 @@ model Project {
 
   @@index([userId, createdAt])
   @@index([userId, status, updatedAt])
+  @@index([deletedAt])
 }
 
 model Expense {
@@ -111,9 +113,11 @@ model Expense {
   notes        String?     @db.Text
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
   project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, date])
+  @@index([projectId, deletedAt, date])
 }
 
 model Payment {
@@ -124,9 +128,11 @@ model Payment {
   notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, date])
+  @@index([projectId, deletedAt, date])
 }
 
 model BudgetAdjustment {
@@ -147,11 +153,13 @@ model ProjectMember {
   userId    String
   role      ProjectMemberRole @default(EDITOR)
   createdAt DateTime          @default(now())
+  deletedAt DateTime?
   project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([projectId, userId])
   @@index([userId])
+  @@index([projectId, deletedAt])
 }
 
 model Task {
@@ -164,11 +172,13 @@ model Task {
   completedAt  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
   createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
   project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([createdById, status, updatedAt])
   @@index([projectId, status])
+  @@index([createdById, deletedAt, status, updatedAt])
 }
 
 model Session {

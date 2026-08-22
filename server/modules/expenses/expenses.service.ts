@@ -39,7 +39,7 @@ export async function getProjectExpensePage(
   const project = await findProjectForUser(prisma, projectId, userId);
   if (!project) throw new NotFoundError("Проект");
 
-  const where = { projectId, ...(type ? { type } : {}) };
+  const where = { projectId, deletedAt: null, ...(type ? { type } : {}) };
   const [expenses, totalCount] = await Promise.all([
     prisma.expense.findMany({
       where,

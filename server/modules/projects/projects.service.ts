@@ -100,7 +100,7 @@ export async function updateProjectForUser(
 }
 
 export async function requestProjectCompletion(userId: string, projectId: string) {
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
+  const project = await prisma.project.findFirst({ where: { id: projectId, userId, deletedAt: null } });
 
   if (!project) {
     throw new NotFoundError("Проект");
@@ -119,7 +119,7 @@ export async function completeProjectForUser(userId: string, projectId: string) 
   await requestProjectCompletion(userId, projectId);
 
   const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "ACTIVE" },
+    where: { id: projectId, userId, status: "ACTIVE", deletedAt: null },
     data: { status: "COMPLETED", completedAt: new Date() },
   });
 
@@ -132,7 +132,7 @@ export async function completeProjectForUser(userId: string, projectId: string) 
 
 export async function freezeProjectForUser(userId: string, projectId: string) {
   const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "ACTIVE" },
+    where: { id: projectId, userId, status: "ACTIVE", deletedAt: null },
     data: { status: "FROZEN", frozenAt: new Date() },
   });
 
@@ -145,7 +145,7 @@ export async function freezeProjectForUser(userId: string, projectId: string) {
 
 export async function resumeProjectForUser(userId: string, projectId: string) {
   const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "FROZEN" },
+    where: { id: projectId, userId, status: "FROZEN", deletedAt: null },
     data: { status: "ACTIVE", frozenAt: null },
   });
 

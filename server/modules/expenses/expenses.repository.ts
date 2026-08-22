@@ -9,10 +9,12 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
   return db.expense.findFirst({
     where: {
       id: expenseId,
+      deletedAt: null,
       project: {
+        deletedAt: null,
         OR: [
           { userId },
-          { members: { some: { userId, role: "EDITOR" } } },
+          { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
         ],
       },
     },
@@ -39,7 +41,7 @@ export function updateExpense(
 }
 
 export function deleteExpense(db: DbClient, expenseId: string) {
-  return db.expense.delete({ where: { id: expenseId } });
+  return db.expense.update({ where: { id: expenseId }, data: { deletedAt: new Date() } });
 }
 
 export function changeProjectSpentAmount(

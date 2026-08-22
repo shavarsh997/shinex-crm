@@ -13,31 +13,32 @@ import { findProjectForEditor } from "../projects/projects.repository";
 import type { CreateTaskInput, UpdateTaskInput } from "./tasks.schema";
 
 const visibleToUser = (userId: string): Prisma.TaskWhereInput => ({
-  OR: [
+  AND: [{ deletedAt: null }, { OR: [
     { createdById: userId, projectId: null },
     {
       project: {
-        is: { OR: [{ userId }, { members: { some: { userId } } }] },
+        is: { deletedAt: null, OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }] },
       },
     },
-  ],
+  ] }],
 });
 
 const editableByUser = (userId: string): Prisma.TaskWhereInput => ({
-  OR: [
+  AND: [{ deletedAt: null }, { OR: [
     { createdById: userId, projectId: null },
     {
       project: {
         is: {
           status: "ACTIVE",
+          deletedAt: null,
           OR: [
             { userId },
-            { members: { some: { userId, role: "EDITOR" } } },
+            { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
           ],
         },
       },
     },
-  ],
+  ] }],
 });
 
 const taskInclude = {
@@ -87,9 +88,10 @@ export function getEditableProjectsForTasks(userId: string) {
   return prisma.project.findMany({
     where: {
       status: "ACTIVE",
+      deletedAt: null,
       OR: [
         { userId },
-        { members: { some: { userId, role: "EDITOR" } } },
+        { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
       ],
     },
     select: { id: true, title: true },
@@ -140,5 +142,5 @@ export async function deleteTaskForUser(userId: string, taskId: string) {
   });
   if (!task) throw new NotFoundError("Задача");
 
-  await prisma.task.delete({ where: { id: taskId } });
+  await prisma.task.update({ where: { id: taskId }, data: { deletedAt: new Date() } });
 }

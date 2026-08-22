@@ -44,10 +44,12 @@ export async function updateProjectPayment(
     const payment = await transaction.payment.findFirst({
       where: {
         id: paymentId,
+        deletedAt: null,
         project: {
+          deletedAt: null,
           OR: [
             { userId },
-            { members: { some: { userId, role: "EDITOR" } } },
+            { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
           ],
         },
       },
@@ -83,10 +85,12 @@ export async function deleteProjectPayment(userId: string, paymentId: string) {
     const payment = await transaction.payment.findFirst({
       where: {
         id: paymentId,
+        deletedAt: null,
         project: {
+          deletedAt: null,
           OR: [
             { userId },
-            { members: { some: { userId, role: "EDITOR" } } },
+            { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
           ],
         },
       },
@@ -103,7 +107,7 @@ export async function deleteProjectPayment(userId: string, paymentId: string) {
       throw new ConflictError("Нельзя удалять поступления неактивного проекта.");
     }
 
-    await transaction.payment.delete({ where: { id: paymentId } });
+    await transaction.payment.update({ where: { id: paymentId }, data: { deletedAt: new Date() } });
     await transaction.project.update({
       where: { id: payment.projectId },
       data: { receivedAmount: { decrement: payment.amount } },
