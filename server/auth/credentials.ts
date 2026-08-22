@@ -13,7 +13,7 @@ const emailSchema = z.string().trim().email("Введите корректный
 
 export const credentialsSchema = z.object({
   email: emailSchema,
-  password: z.string().min(12, "Пароль должен содержать не менее 12 символов.").max(128),
+  password: z.string().min(6, "Пароль должен содержать не менее 6 символов.").max(50),
 });
 
 export const registrationSchema = credentialsSchema.extend({

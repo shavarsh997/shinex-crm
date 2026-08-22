@@ -95,7 +95,7 @@ export function LoginForm({ accessDenied = false }: { accessDenied?: boolean }) 
       <form className="grid gap-3" onSubmit={submit}>
         {isRegistering && <label className="grid gap-1 text-sm font-medium">{t("auth.name")}<Input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>}
         <label className="grid gap-1 text-sm font-medium">{t("auth.email")}<Input name="email" type="email" autoComplete="email" required maxLength={320} /></label>
-        <label className="grid gap-1 text-sm font-medium">{t("auth.password")}<Input name="password" type="password" autoComplete={isRegistering ? "new-password" : "current-password"} required minLength={12} maxLength={128} /></label>
+        <label className="grid gap-1 text-sm font-medium">{t("auth.password")}<Input name="password" type="password" autoComplete={isRegistering ? "new-password" : "current-password"} required minLength={6} maxLength={50} /></label>
         <Button type="submit" size="lg" disabled={isPending}>{isPending ? t("auth.wait") : isRegistering ? t("auth.createAccount") : t("auth.signIn")}</Button>
       </form>
     </div>
