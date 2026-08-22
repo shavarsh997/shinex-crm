@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -27,6 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Script src="https://telegram.org/js/telegram-web-app.js?58" strategy="beforeInteractive" />
         <LocaleProvider locale={locale}>
           {children}
           <div className="fixed right-4 top-4 z-50">

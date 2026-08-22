@@ -6,13 +6,13 @@ The project uses Next.js, Prisma ORM 7, and PostgreSQL running in Docker.
 
 1. Start Docker Desktop.
 2. Copy the local configuration: `cp .env.example .env`
-3. Run `npm run docker:up` (or `docker compose up --build`).
-4. Seed the development accounts: `npm run db:seed`.
-5. Open [http://localhost:3001](http://localhost:3001) and sign in with `admin@shinex.local` / `AdminPass!2026`.
+3. Set `ADMIN_EMAIL` in `.env` to the email address for the first administrator.
+4. Run `npm run docker:up` (or `docker compose up --build`).
+5. Open [http://localhost:3001](http://localhost:3001), register that address, and sign in.
 
 The development container waits for PostgreSQL, applies the committed migrations, generates Prisma Client, and then starts Next.js. Stop the stack with `npm run docker:down`. Your PostgreSQL data remains in the `postgres_data` Docker volume.
 
-The default `Dockerfile` target is a production image: it builds Next.js once and starts it with `node server.js`. Apply migrations with `npm run db:deploy` as a separate deployment step; do not run the demo seed in production.
+The default `Dockerfile` target is a production image: it builds Next.js once and starts it with `node server.js`. Apply migrations with `npm run db:deploy` as a separate deployment step.
 
 ### Run Next.js on your computer, PostgreSQL in Docker
 
@@ -21,9 +21,10 @@ The default `Dockerfile` target is a production image: it builds Next.js once an
 3. Start PostgreSQL: `npm run db:up`
 4. Apply the initial database schema: `npm run db:deploy`
 5. Generate the Prisma client: `npm run db:generate`
-6. Start the application: `npm run dev`
+6. Set `ADMIN_EMAIL` to the email address for the first administrator.
+7. Start the application: `npm run dev`
 
-Run `npm run db:seed` to create the default administrator and member, plus three realistic demo projects and their expenses. The seed is idempotent; it refreshes only its fixed `seed-*` records and the two configured development accounts.
+Register the configured administrator email through the normal registration form to create the first administrator. No demo users, passwords, projects, or expenses are included.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -36,18 +37,29 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run db:generate` — regenerate Prisma Client after schema changes.
 - `npm run db:migrate -- --name descriptive_change` — create and apply a migration.
 - `npm run db:deploy` — apply existing migrations without creating new ones.
-- `npm run db:seed` — add or refresh the demo projects and expenses for the first approved administrator.
 - `npm run db:studio` — open Prisma Studio.
 
 ## Access control
 
-- Authentication uses email and password. The seed creates `admin@shinex.local` / `AdminPass!2026` and `user@shinex.local` / `UserPass!2026`; override these only with `SEED_*` variables in a non-shared development environment.
+- Authentication uses email and password; no default users or passwords are included.
 - A successful login creates one opaque, `HttpOnly` session token. It is valid for exactly 37 days and is not refreshed or exchanged for another token.
-- Every registration starts with `PENDING` status. A user cannot sign in or use the CRM until an administrator approves the account on **Доступы**. Create the initial administrator with `npm run db:seed`.
+- Every registration, except the configured administrator email, starts with `PENDING` status. A user cannot sign in or use the CRM until an administrator approves the account on **Доступы**. Register the configured email to create the initial administrator.
+- Set `ADMIN_EMAIL` in the deployment environment to make one designated email address an administrator during registration. That account is created with the `ADMIN` role and `APPROVED` status; leave the variable empty to disable this exception.
 - Administrators can set the `ADMIN`, `MANAGER`, or `MEMBER` role, approve, return to pending, or reject an account. `ADMIN` and `MANAGER` can create and edit their own projects; `MEMBER` has read-only access to their own projects. Only an `ADMIN` can call the access-management API endpoints.
 - Roles and approval state are stored in PostgreSQL.
 
 The local Docker database is intentionally development-only; use distinct credentials and a managed PostgreSQL instance in production.
+
+## Telegram Mini App
+
+The CRM can be launched as a Telegram Mini App. It does not process chat messages or use a webhook. When a signed-in CRM user opens the app from the bot, the app verifies Telegram's `initData` on the server and links that Telegram account to the CRM user. Each newly added expense is then sent to the same private bot chat as a **Новая выплата** notification.
+
+1. Create a bot through [@BotFather](https://t.me/BotFather) and set its Mini App/menu-button URL to the public **HTTPS** URL of this CRM.
+2. Add the bot token to the deployment environment as `TELEGRAM_BOT_TOKEN`; do not put it in a `NEXT_PUBLIC_` variable.
+3. Apply the included database migration with `npm run db:deploy` and deploy the app.
+4. Open the Mini App from the bot, then sign in to the CRM once. Future payouts created by that CRM account will be saved as messages in that same private bot chat.
+
+Telegram requires the user to have opened the bot before the bot can send a private message. Opening the Mini App from the bot fulfils that requirement.
 
 ## Architecture
 

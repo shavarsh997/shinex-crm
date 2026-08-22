@@ -20,6 +20,11 @@ export const registrationSchema = credentialsSchema.extend({
   name: z.string().trim().min(2, "Укажите имя.").max(100),
 });
 
+function isConfiguredAdminEmail(email: string) {
+  const configuredEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  return Boolean(configuredEmail) && email === configuredEmail;
+}
+
 /**
  * Checks a password and the CRM access status.  A session is intentionally
  * created elsewhere so this function can be used by a route handler without
@@ -64,6 +69,9 @@ export async function registerWithPassword(input: z.infer<typeof registrationSch
     throw new ConflictError("Пользователь с таким email уже зарегистрирован.");
   }
 
+  const isAdmin = isConfiguredAdminEmail(input.email);
+  const approvedAt = isAdmin ? new Date() : null;
+
   let user;
   try {
     user = await prisma.user.create({
@@ -71,6 +79,9 @@ export async function registerWithPassword(input: z.infer<typeof registrationSch
         name: input.name,
         email: input.email,
         passwordHash: await hashPassword(input.password),
+        role: isAdmin ? "ADMIN" : "MEMBER",
+        approvalStatus: isAdmin ? "APPROVED" : "PENDING",
+        approvedAt,
       },
       select: { id: true },
     });
@@ -84,6 +95,6 @@ export async function registerWithPassword(input: z.infer<typeof registrationSch
 
   return {
     userId: user.id,
-    approved: false,
+    approved: isAdmin,
   };
 }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/server/db/prisma";
 import { ExpenseType, type Prisma } from "@/server/generated/prisma/client";
+import { notifyTelegramAboutPayout } from "@/server/modules/telegram/telegram.service";
 import { ConflictError, NotFoundError } from "@/server/shared/errors";
 import {
   createCursorPage,
@@ -57,7 +58,7 @@ export async function addProjectExpense(
   projectId: string,
   input: CreateExpenseInput,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const payout = await prisma.$transaction(async (tx) => {
     const project = await findProjectForEditor(tx, projectId, userId);
 
     if (!project) {
@@ -71,8 +72,17 @@ export async function addProjectExpense(
     const expense = await createExpense(tx, projectId, input);
     await changeProjectSpentAmount(tx, projectId, expense.amount);
 
-    return expense;
+    return { expense, projectTitle: project.title };
   });
+
+  await notifyTelegramAboutPayout(userId, {
+    projectTitle: payout.projectTitle,
+    title: payout.expense.title,
+    amount: payout.expense.amount,
+    date: payout.expense.date,
+  });
+
+  return payout.expense;
 }
 
 export async function updateProjectExpense(
