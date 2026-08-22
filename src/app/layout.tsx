@@ -2,16 +2,20 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { getLocale } from "@/i18n/locale";
+import { LocaleProvider } from "@/i18n/provider";
 
 export const metadata: Metadata = {
   title: "Shinex CRM",
   description: "Управление строительными проектами и расходами.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
   return (
     <html
-      lang="ru"
+      lang={locale}
       className="h-full antialiased"
       suppressHydrationWarning
     >
@@ -23,8 +27,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        {children}
-        <ThemeToggle />
+        <LocaleProvider locale={locale}>
+          {children}
+          <div className="fixed right-4 top-4 z-50">
+            <LanguageSwitcher />
+          </div>
+          <ThemeToggle />
+        </LocaleProvider>
       </body>
     </html>
   );

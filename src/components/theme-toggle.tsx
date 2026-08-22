@@ -1,10 +1,12 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { useTranslations } from "@/i18n/provider";
 
 const storageKey = "shinex-theme";
 
 export function ThemeToggle() {
+  const { t } = useTranslations();
   function toggleTheme() {
     const nextTheme = document.documentElement.classList.contains("dark") ? "light" : "dark";
 
@@ -17,8 +19,8 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       className="fixed right-4 bottom-24 z-50 inline-flex size-10 items-center justify-center rounded-full border bg-card text-foreground shadow-lg transition hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:bottom-4"
-      aria-label="Переключить светлую и тёмную тему"
-      title="Переключить тему"
+      aria-label={t("theme.toggle")}
+      title={t("theme.title")}
     >
       <Sun className="hidden size-5 dark:block" aria-hidden="true" />
       <Moon className="size-5 dark:hidden" aria-hidden="true" />

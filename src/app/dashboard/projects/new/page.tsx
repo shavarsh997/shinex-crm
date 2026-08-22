@@ -1,4 +1,5 @@
 import { CreateProjectForm } from "@/components/projects/create-project-form";
 import { requireProjectEditor } from "@/server/auth";
+import { getTranslations } from "@/i18n/server";
 
-export default async function NewProjectPage() { await requireProjectEditor(); return <div className="mx-auto max-w-2xl px-5 pb-28 pt-6 sm:px-8 sm:pt-8"><p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">Новый проект</p><h1 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-950">Создайте проект</h1><p className="mt-2 text-sm text-slate-500">Только самое важное — детали добавите позже.</p><div className="mt-7 rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/80 sm:p-7"><CreateProjectForm /></div></div>; }
+export default async function NewProjectPage() { await requireProjectEditor(); const { t } = await getTranslations(); return <div className="mx-auto max-w-2xl px-5 pb-28 pt-6 sm:px-8 sm:pt-8"><p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{t("project.newEyebrow")}</p><h1 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-950">{t("project.newTitle")}</h1><p className="mt-2 text-sm text-slate-500">{t("project.newDescription")}</p><div className="mt-7 rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-slate-200/80 sm:p-7"><CreateProjectForm /></div></div>; }
