@@ -25,6 +25,7 @@ export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact 
   const [type, setType] = useState<ExpenseView["type"]>(expense?.type ?? "MATERIAL");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [clientRequestId] = useState(() => crypto.randomUUID());
   const isOpen = open ?? internalOpen;
   const isSalary = type === "EMPLOYEE";
   const date = expense?.date.slice(0, 10) || new Date().toISOString().slice(0, 10);
@@ -57,6 +58,7 @@ export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact 
     <ResponsiveDialogContent className="gap-5 p-5 pb-8 sm:p-7">
       <DialogHeader><DialogTitle className="text-xl tracking-[-0.035em]">{expense ? "Изменить расход" : "Новый расход"}</DialogTitle><DialogDescription>{isSalary ? "Укажите сумму и сотрудника, который получил зарплату." : "Заполните главное — детали можно добавить позже."}</DialogDescription></DialogHeader>
       <form action={submit} className="grid gap-5">
+        {!expense && <input name="clientRequestId" type="hidden" value={clientRequestId} />}
         <label className="grid gap-2 text-sm font-semibold text-slate-700">Сумма, AMD<div className="relative"><Input required name="amount" inputMode="numeric" defaultValue={expense?.amount} placeholder="0" className="h-16 rounded-2xl border-slate-200 pr-14 text-3xl font-semibold tracking-[-0.05em]" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">AMD</span></div></label>
         <div><p className="mb-2 text-sm font-semibold text-slate-700">Категория</p><label className="relative block"><select name="type" value={type} onChange={(event) => setType(event.target.value as ExpenseView["type"])} className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none focus:ring-3 focus:ring-blue-100">{types.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><ReceiptText className="pointer-events-none absolute right-4 top-3.5 size-5 text-slate-400" /></label></div>
         {isSalary && <label className="grid gap-2 text-sm font-semibold text-slate-700">Сотрудник, получивший зарплату<div className="relative"><Input required name="employeeName" defaultValue={expense?.employeeName || ""} placeholder="Имя и фамилия сотрудника" className="h-12 rounded-2xl border-slate-200 pl-11" /><UserRound className="pointer-events-none absolute left-4 top-3.5 size-5 text-slate-400" /></div></label>}

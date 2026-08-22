@@ -14,13 +14,22 @@ COPY . .
 
 CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
 
+# A short-lived production deployment job. Migrations run here, never while
+# building an image and never in the long-running web server.
+FROM base AS migrate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+CMD ["npm", "run", "db:deploy"]
+
 FROM base AS builder
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Prisma generation and Next.js module analysis require a URL, but no database
-# connection is made while building the image.
+# Prisma generation and Next.js module analysis require a URL, but the build
+# must never connect to or mutate the production database.
 ENV DATABASE_URL="postgresql://shinex:shinex_build:5432/shinex_crm?schema=public"
 RUN npm run db:generate
 RUN npm run build

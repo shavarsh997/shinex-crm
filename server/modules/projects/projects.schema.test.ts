@@ -8,6 +8,7 @@ describe("project schemas", () => {
       title: "Тестовый проект",
       estimatedAmount: "100000",
       receivedAmount: "25000",
+      clientRequestId: "b65b3ed0-ded3-4fac-85f0-4e0ea8e1b990",
     });
 
     expect(created.estimatedAmount).toBe(100_000n);

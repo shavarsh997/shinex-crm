@@ -23,12 +23,13 @@ export function BudgetAdjustmentDialog({ projectId }: { projectId: string }) {
   const [type, setType] = useState<AdjustmentType>("INCREASE");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clientRequestId] = useState(() => crypto.randomUUID());
 
   async function submit(data: FormData) {
     setPending(true);
     setError(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/budget-adjustments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(data)) });
+      const response = await fetch(`/api/projects/${projectId}/budget-adjustments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...Object.fromEntries(data), clientRequestId }) });
       const payload = await response.json().catch(() => null) as { error?: { message?: string; details?: { message?: string } } } | null;
       if (!response.ok) throw new Error(payload?.error?.details?.message ?? payload?.error?.message ?? t("budget.updateFailed"));
       setOpen(false);

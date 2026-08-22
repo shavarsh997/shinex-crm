@@ -18,7 +18,29 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
         ],
       },
     },
-    select: { id: true, projectId: true, amount: true, project: { select: { status: true } } },
+    select: {
+      id: true, projectId: true, type: true, title: true, amount: true, date: true,
+      description: true, employeeName: true, vendorName: true, notes: true,
+      project: { select: { status: true } },
+    },
+  });
+}
+
+export function findDeletedExpenseForUser(db: DbClient, expenseId: string, userId: string) {
+  return db.expense.findFirst({
+    where: {
+      id: expenseId,
+      deletedAt: { not: null },
+      project: {
+        deletedAt: null,
+        OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }],
+      },
+    },
+    select: {
+      id: true, projectId: true, type: true, title: true, amount: true, date: true,
+      description: true, employeeName: true, vendorName: true, notes: true,
+      project: { select: { status: true } },
+    },
   });
 }
 

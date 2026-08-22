@@ -13,11 +13,12 @@ export function CreateProjectForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [clientRequestId] = useState(() => crypto.randomUUID());
 
   async function submit(data: FormData) {
     setError(null); setPending(true);
     try {
-      const response = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(data)) });
+      const response = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...Object.fromEntries(data), clientRequestId }) });
       const payload = await response.json().catch(() => null) as { project?: { id: string }; error?: { message: string } } | null;
       if (!response.ok || !payload?.project) throw new Error(payload?.error?.message || t("form.createProjectFailed"));
       router.push(`/dashboard/projects/${payload.project.id}`); router.refresh();

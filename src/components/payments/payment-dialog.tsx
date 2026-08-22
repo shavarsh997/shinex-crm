@@ -31,6 +31,7 @@ export function PaymentDialog({ projectId, payment, compact = false }: {
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clientRequestId] = useState(() => crypto.randomUUID());
   const isEditing = Boolean(payment);
 
   function changeOpen(nextOpen: boolean) {
@@ -92,6 +93,7 @@ export function PaymentDialog({ projectId, payment, compact = false }: {
         <DialogDescription>{t("payment.description")}</DialogDescription>
       </DialogHeader>
       <form action={submit} className="mt-5 grid gap-5">
+        {!payment && <input name="clientRequestId" type="hidden" value={clientRequestId} />}
         <label className="grid gap-2 text-sm font-semibold text-slate-700">{t("common.amountAmd")}<Input required name="amount" inputMode="numeric" defaultValue={payment?.amount} placeholder="0" className="h-14 rounded-2xl text-xl font-semibold" /></label>
         <label className="grid gap-2 text-sm font-semibold text-slate-700">{t("common.date")}<Input required name="date" type="date" defaultValue={payment?.date.slice(0, 10) || today()} className="h-12 rounded-2xl" /></label>
         <label className="grid gap-2 text-sm font-semibold text-slate-700">{t("payment.source")} <span className="font-normal text-slate-400">({t("common.optional")})</span><textarea name="notes" defaultValue={payment?.notes || ""} rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-blue-100" placeholder={t("payment.sourcePlaceholder")} /></label>

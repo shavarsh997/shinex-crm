@@ -12,6 +12,7 @@ export const createBudgetAdjustmentSchema = z.object({
     .refine((value) => value <= MAX_MONEY, "Сумма превышает допустимый предел."),
   date: z.coerce.date(),
   notes: z.string().trim().max(2_000).optional().transform((value) => value || undefined),
+  clientRequestId: z.uuid("Некорректный ключ операции."),
 });
 
 export type CreateBudgetAdjustmentInput = z.infer<typeof createBudgetAdjustmentSchema>;

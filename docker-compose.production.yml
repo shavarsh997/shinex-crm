@@ -1,0 +1,25 @@
+# Production deployment only. This intentionally has no source-code volume and
+# never invokes `next dev`; use docker-compose.yml for local development.
+services:
+  migrate:
+    build:
+      context: .
+      target: migrate
+    env_file:
+      - .env.production
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

@@ -12,7 +12,25 @@ The project uses Next.js, Prisma ORM 7, and PostgreSQL running in Docker.
 
 The development container waits for PostgreSQL, applies the committed migrations, generates Prisma Client, and then starts Next.js. Stop the stack with `npm run docker:down`. Your PostgreSQL data remains in the `postgres_data` Docker volume.
 
-The default `Dockerfile` target is a production image: it builds Next.js once and starts it with `node server.js`. Apply migrations with `npm run db:deploy` as a separate deployment step.
+The default `Dockerfile` target is a production image: it builds Next.js once and starts it with `node server.js`. Apply migrations with `npm run db:deploy` as a separate, single-run deployment step before replacing application instances. Never run migrations during image build.
+
+### Production with Docker
+
+`docker-compose.yml` is deliberately development-only: it mounts the source directory and starts `next dev`, which shows the Next.js `N` development indicator. Do not deploy it publicly.
+
+For production, create an untracked `.env.production` with the production `DATABASE_URL`, `ADMIN_EMAIL`, Telegram values, and an optional `APP_PORT`. Then run:
+
+```bash
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+The one-time `migrate` container applies migrations first; only after it succeeds does the production `app` container start `node server.js` with `NODE_ENV=production`. It has no source-code volume and cannot show Next.js development UI.
+
+### Production data protection
+
+Before real use, deploy PostgreSQL with automated encrypted backups and point-in-time recovery. Regularly restore one backup into an isolated environment and verify that the CRM starts and its financial totals reconcile. A Docker volume is persistent storage, not a backup.
+
+Financial writes use an idempotency key and are serialized per project. API consumers must preserve the same `clientRequestId` UUID when retrying a create request; sending a new key intentionally creates a new operation.
 
 ### Run Next.js on your computer, PostgreSQL in Docker
 

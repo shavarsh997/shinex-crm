@@ -41,30 +41,33 @@ export async function updateUserAccess(
     throw new ForbiddenError("Нельзя изменять собственный уровень доступа.");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true, approvalStatus: true },
-  });
-
-  if (!user) {
-    throw new NotFoundError("Пользователь");
-  }
-
-  const revokesLastApprovedAdmin = user.role === "ADMIN"
-    && user.approvalStatus === "APPROVED"
-    && (input.role !== "ADMIN" || input.approvalStatus !== "APPROVED");
-
-  if (revokesLastApprovedAdmin) {
-    const approvedAdminCount = await prisma.user.count({
-      where: { role: "ADMIN", approvalStatus: "APPROVED" },
-    });
-
-    if (approvedAdminCount <= 1) {
-      throw new ConflictError("Нельзя отозвать доступ у последнего активного администратора.");
-    }
-  }
-
   return prisma.$transaction(async (transaction) => {
+    // Lock every active administrator before counting them. Without this,
+    // two simultaneous demotions could both see two admins and leave zero.
+    await transaction.$queryRaw`
+      SELECT "id" FROM "User"
+      WHERE "role" = 'ADMIN' AND "approvalStatus" = 'APPROVED'
+      FOR UPDATE
+    `;
+
+    const user = await transaction.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, approvalStatus: true },
+    });
+    if (!user) throw new NotFoundError("Пользователь");
+
+    const revokesLastApprovedAdmin = user.role === "ADMIN"
+      && user.approvalStatus === "APPROVED"
+      && (input.role !== "ADMIN" || input.approvalStatus !== "APPROVED");
+    if (revokesLastApprovedAdmin) {
+      const approvedAdminCount = await transaction.user.count({
+        where: { role: "ADMIN", approvalStatus: "APPROVED" },
+      });
+      if (approvedAdminCount <= 1) {
+        throw new ConflictError("Нельзя отозвать доступ у последнего активного администратора.");
+      }
+    }
+
     const updatedUser = await transaction.user.update({
       where: { id: userId },
       data: {
