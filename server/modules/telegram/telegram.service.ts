@@ -87,17 +87,30 @@ export function isValidTelegramWebhookSecret(receivedSecret: string | null) {
   }
 }
 
-/** Makes the CRM available from the menu button beside the chat input in every private bot chat. */
-async function registerTelegramMenuButton() {
+function createTelegramMenuButton(): TelegramMenuButton {
   const webAppUrl = getTelegramWebAppUrl();
-  const menuButton: TelegramMenuButton = {
+
+  return {
     type: "web_app",
     text: "Открыть CRM",
     web_app: { url: webAppUrl.toString() },
   };
+}
+
+/** Makes the CRM available from the menu button beside the chat input in every private bot chat. */
+async function registerTelegramMenuButton() {
+  const menuButton = createTelegramMenuButton();
 
   await callTelegramApi("setChatMenuButton", {
     menu_button: menuButton,
+  });
+}
+
+/** Makes the CRM available from the menu button beside the input in one private bot chat. */
+export async function registerTelegramChatMenuButton(chatId: string) {
+  await callTelegramApi("setChatMenuButton", {
+    chat_id: chatId,
+    menu_button: createTelegramMenuButton(),
   });
 }
 
