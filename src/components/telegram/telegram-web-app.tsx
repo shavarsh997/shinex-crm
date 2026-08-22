@@ -6,6 +6,8 @@ type TelegramWebApp = {
   initData: string;
   ready: () => void;
   expand: () => void;
+  isFullscreen?: boolean;
+  requestFullscreen?: () => void;
 };
 
 declare global {
@@ -22,6 +24,9 @@ export function TelegramWebAppBridge() {
 
     webApp.ready();
     webApp.expand();
+    if (!webApp.isFullscreen) {
+      webApp.requestFullscreen?.();
+    }
 
     if (!webApp.initData) return;
 

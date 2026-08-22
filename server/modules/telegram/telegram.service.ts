@@ -13,8 +13,10 @@ type TelegramApiResult = {
   description?: string;
 };
 
-type TelegramInlineKeyboard = {
-  inline_keyboard: Array<Array<{ text: string; web_app: { url: string } }>>;
+type TelegramMenuButton = {
+  type: "web_app";
+  text: string;
+  web_app: { url: string };
 };
 
 function getBotToken() {
@@ -72,8 +74,6 @@ async function callTelegramApi(method: string, body: Record<string, unknown>) {
   }
 }
 
-export { isTelegramStartCommand } from "./telegram.commands";
-
 /** Verifies Telegram's secret-token header before processing an incoming update. */
 export function isValidTelegramWebhookSecret(receivedSecret: string | null) {
   try {
@@ -87,20 +87,17 @@ export function isValidTelegramWebhookSecret(receivedSecret: string | null) {
   }
 }
 
-/** Sends the CRM launch button after Telegram delivers a /start command. */
-export async function sendTelegramStartMessage(chatId: string) {
+/** Makes the CRM available from the menu button beside the chat input in every private bot chat. */
+async function registerTelegramMenuButton() {
   const webAppUrl = getTelegramWebAppUrl();
-  const replyMarkup: TelegramInlineKeyboard = {
-    inline_keyboard: [[{
-      text: "Открыть CRM",
-      web_app: { url: webAppUrl.toString() },
-    }]],
+  const menuButton: TelegramMenuButton = {
+    type: "web_app",
+    text: "Открыть CRM",
+    web_app: { url: webAppUrl.toString() },
   };
 
-  await callTelegramApi("sendMessage", {
-    chat_id: chatId,
-    text: "Добро пожаловать в SHINEX CRM. Нажмите кнопку ниже, чтобы открыть приложение.",
-    reply_markup: replyMarkup,
+  await callTelegramApi("setChatMenuButton", {
+    menu_button: menuButton,
   });
 }
 
@@ -125,8 +122,9 @@ export async function registerTelegramWebhook() {
       secret_token: getTelegramWebhookSecret(),
       allowed_updates: ["message"],
     });
+    await registerTelegramMenuButton();
   } catch (error) {
-    console.error("Telegram webhook registration failed", error);
+    console.error("Telegram integration registration failed", error);
   }
 }
 
