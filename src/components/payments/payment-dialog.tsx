@@ -2,31 +2,57 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleDollarSign, Plus } from "lucide-react";
+import { CircleDollarSign, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
+export type PaymentView = {
+  id: string;
+  amount: string;
+  date: string;
+  notes: string | null;
+};
+
 function today() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return new Date().toISOString().slice(0, 10);
 }
 
-export function PaymentDialog({ projectId, compact = false }: { projectId: string; compact?: boolean }) {
+export function PaymentDialog({ projectId, payment, compact = false }: {
+  projectId: string;
+  payment?: PaymentView;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEditing = Boolean(payment);
+
+  function changeOpen(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) setError(null);
+  }
 
   async function submit(data: FormData) {
     setPending(true);
     setError(null);
+
     try {
-      const response = await fetch(`/api/projects/${projectId}/payments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(data)) });
+      const response = await fetch(
+        payment ? `/api/payments/${payment.id}` : `/api/projects/${projectId}/payments`,
+        {
+          method: payment ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(Object.fromEntries(data)),
+        },
+      );
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
       if (!response.ok) throw new Error(payload?.error?.message ?? "Не удалось сохранить поступление.");
-      setOpen(false);
+
+      changeOpen(false);
       router.refresh();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Не удалось сохранить поступление.");
@@ -35,8 +61,44 @@ export function PaymentDialog({ projectId, compact = false }: { projectId: strin
     }
   }
 
-  return <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) setError(null); }}>
-    <DialogTrigger render={<Button size={compact ? "icon" : "lg"} className={compact ? "size-12 rounded-2xl bg-emerald-600 text-white" : "h-12 rounded-2xl bg-emerald-600 px-4 text-white hover:bg-emerald-700"} />}><CircleDollarSign className="size-4" />{!compact && "Добавить поступление"}</DialogTrigger>
-    <ResponsiveDialogContent className="p-5 pb-8 sm:p-7"><DialogHeader><DialogTitle className="text-xl tracking-[-0.035em]">Новое поступление</DialogTitle><DialogDescription>Укажите, сколько денег поступило от клиента или работодателя. Поступление обновит баланс проекта.</DialogDescription></DialogHeader><form action={submit} className="mt-5 grid gap-5"><label className="grid gap-2 text-sm font-semibold text-slate-700">Сумма, AMD<Input required name="amount" inputMode="numeric" placeholder="0" className="h-14 rounded-2xl text-xl font-semibold" /></label><label className="grid gap-2 text-sm font-semibold text-slate-700">Дата<Input required name="date" type="date" defaultValue={today()} className="h-12 rounded-2xl" /></label><label className="grid gap-2 text-sm font-semibold text-slate-700">От кого поступление <span className="font-normal text-slate-400">(необязательно)</span><textarea name="notes" rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-blue-100" placeholder="Например: оплата от клиента за этап работ" /></label>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}<Button type="submit" size="lg" className="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700" disabled={pending}><Plus className="size-4" />{pending ? "Сохраняем…" : "Сохранить поступление"}</Button></form></ResponsiveDialogContent>
+  async function remove() {
+    if (!payment || !window.confirm("Удалить это поступление?")) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/payments/${payment.id}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Не удалось удалить поступление.");
+
+      changeOpen(false);
+      router.refresh();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Не удалось удалить поступление.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return <Dialog open={open} onOpenChange={changeOpen}>
+    <DialogTrigger render={<Button aria-label={isEditing ? "Изменить поступление" : "Добавить поступление"} size={compact ? "icon" : "lg"} variant={isEditing ? "ghost" : "default"} className={isEditing ? "size-9 rounded-xl text-slate-500 hover:text-slate-950" : compact ? "size-12 rounded-2xl bg-emerald-600 text-white" : "h-12 rounded-2xl bg-emerald-600 px-4 text-white hover:bg-emerald-700"} />}>
+      {isEditing ? <Pencil className="size-4" /> : <><CircleDollarSign className="size-4" />{!compact && "Добавить поступление"}</>}
+    </DialogTrigger>
+    <ResponsiveDialogContent className="p-5 pb-8 sm:p-7">
+      <DialogHeader>
+        <DialogTitle className="text-xl tracking-[-0.035em]">{isEditing ? "Изменить поступление" : "Новое поступление"}</DialogTitle>
+        <DialogDescription>Укажите сумму, дату и при необходимости источник поступления. Баланс проекта будет пересчитан автоматически.</DialogDescription>
+      </DialogHeader>
+      <form action={submit} className="mt-5 grid gap-5">
+        <label className="grid gap-2 text-sm font-semibold text-slate-700">Сумма, AMD<Input required name="amount" inputMode="numeric" defaultValue={payment?.amount} placeholder="0" className="h-14 rounded-2xl text-xl font-semibold" /></label>
+        <label className="grid gap-2 text-sm font-semibold text-slate-700">Дата<Input required name="date" type="date" defaultValue={payment?.date.slice(0, 10) || today()} className="h-12 rounded-2xl" /></label>
+        <label className="grid gap-2 text-sm font-semibold text-slate-700">От кого поступление <span className="font-normal text-slate-400">(необязательно)</span><textarea name="notes" defaultValue={payment?.notes || ""} rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-blue-100" placeholder="Например: оплата от клиента за этап работ" /></label>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <div className="flex gap-3">
+          {isEditing && <Button type="button" variant="destructive" size="lg" className="h-12 rounded-2xl" disabled={pending || deleting} onClick={() => void remove()}><Trash2 className="size-4" />{deleting ? "Удаляем…" : "Удалить"}</Button>}
+          <Button type="submit" size="lg" className="h-12 flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-700" disabled={pending || deleting}>{pending ? "Сохраняем…" : isEditing ? "Сохранить изменения" : "Сохранить поступление"}</Button>
+        </div>
+      </form>
+    </ResponsiveDialogContent>
   </Dialog>;
 }

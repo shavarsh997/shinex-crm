@@ -7,7 +7,7 @@ const compact = (amount: bigint) => `${new Intl.NumberFormat("ru-RU", { notation
 
 export default async function FinancePage() {
   const user = await getAuthenticatedUser();
-  const projects = await getUserProjects(user.id);
+  const projects = await getUserProjects(user.id, "ACTIVE");
   const budget = projects.reduce((sum, project) => sum + project.estimatedAmount, 0n);
   const received = projects.reduce((sum, project) => sum + project.receivedAmount, 0n);
   const spent = projects.reduce((sum, project) => sum + project.spentAmount, 0n);

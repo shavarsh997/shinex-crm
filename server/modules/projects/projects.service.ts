@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
+import type { ProjectStatus } from "@/server/generated/prisma/client";
 import { ConflictError, NotFoundError } from "@/server/shared/errors";
 
 import type { CreateProjectInput, UpdateProjectInput } from "./projects.schema";
@@ -12,8 +13,8 @@ import {
   updateProject,
 } from "./projects.repository";
 
-export function getUserProjects(userId: string) {
-  return findProjectsByUserId(userId);
+export function getUserProjects(userId: string, status?: ProjectStatus) {
+  return findProjectsByUserId(userId, status);
 }
 
 export async function getUserProject(userId: string, projectId: string) {

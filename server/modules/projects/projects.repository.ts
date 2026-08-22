@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/db/prisma";
-import type { Prisma } from "@/server/generated/prisma/client";
+import type { Prisma, ProjectStatus } from "@/server/generated/prisma/client";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
@@ -19,10 +19,11 @@ const projectSummaryInclude = {
   },
 } as const;
 
-export function findProjectsByUserId(userId: string) {
+export function findProjectsByUserId(userId: string, status?: ProjectStatus) {
   return prisma.project.findMany({
     where: {
       OR: [{ userId }, { members: { some: { userId } } }],
+      ...(status ? { status } : {}),
     },
     orderBy: { updatedAt: "desc" },
   });

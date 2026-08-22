@@ -48,8 +48,9 @@ export async function addBudgetAdjustment(
       throw new ConflictError("Нельзя менять бюджет неактивного проекта.");
     }
 
-    if (input.type === "DECREASE" && input.amount > project.estimatedAmount) {
-      throw new ValidationError({ message: "Бюджет нельзя уменьшить больше, чем его текущая сумма." });
+    const availableBudget = project.estimatedAmount - project.spentAmount;
+    if (input.type === "DECREASE" && input.amount > availableBudget) {
+      throw new ValidationError({ message: "Бюджет нельзя уменьшить ниже уже понесённых расходов." });
     }
 
     const adjustment = await transaction.budgetAdjustment.create({

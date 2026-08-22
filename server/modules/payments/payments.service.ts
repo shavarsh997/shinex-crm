@@ -4,7 +4,7 @@ import { prisma } from "@/server/db/prisma";
 import { ConflictError, NotFoundError } from "@/server/shared/errors";
 
 import { findProjectForEditor } from "../projects/projects.repository";
-import type { CreatePaymentInput } from "./payments.schema";
+import type { CreatePaymentInput, UpdatePaymentInput } from "./payments.schema";
 
 export async function addProjectPayment(
   userId: string,
@@ -32,5 +32,81 @@ export async function addProjectPayment(
     });
 
     return payment;
+  });
+}
+
+export async function updateProjectPayment(
+  userId: string,
+  paymentId: string,
+  input: UpdatePaymentInput,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const payment = await transaction.payment.findFirst({
+      where: {
+        id: paymentId,
+        project: {
+          OR: [
+            { userId },
+            { members: { some: { userId, role: "EDITOR" } } },
+          ],
+        },
+      },
+      select: {
+        id: true,
+        projectId: true,
+        amount: true,
+        project: { select: { status: true } },
+      },
+    });
+
+    if (!payment) throw new NotFoundError("Поступление");
+    if (payment.project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя изменять поступления неактивного проекта.");
+    }
+
+    const updatedPayment = await transaction.payment.update({
+      where: { id: paymentId },
+      data: input,
+    });
+
+    await transaction.project.update({
+      where: { id: payment.projectId },
+      data: { receivedAmount: { increment: updatedPayment.amount - payment.amount } },
+    });
+
+    return updatedPayment;
+  });
+}
+
+export async function deleteProjectPayment(userId: string, paymentId: string) {
+  return prisma.$transaction(async (transaction) => {
+    const payment = await transaction.payment.findFirst({
+      where: {
+        id: paymentId,
+        project: {
+          OR: [
+            { userId },
+            { members: { some: { userId, role: "EDITOR" } } },
+          ],
+        },
+      },
+      select: {
+        id: true,
+        projectId: true,
+        amount: true,
+        project: { select: { status: true } },
+      },
+    });
+
+    if (!payment) throw new NotFoundError("Поступление");
+    if (payment.project.status !== "ACTIVE") {
+      throw new ConflictError("Нельзя удалять поступления неактивного проекта.");
+    }
+
+    await transaction.payment.delete({ where: { id: paymentId } });
+    await transaction.project.update({
+      where: { id: payment.projectId },
+      data: { receivedAmount: { decrement: payment.amount } },
+    });
   });
 }

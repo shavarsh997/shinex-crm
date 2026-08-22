@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, FolderKanban, ListTodo, Plus, UserRound, Zap } from "lucide-react";
-import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
+import { BarChart3, FolderKanban, ListTodo, UserRound, Zap } from "lucide-react";
+import { Dialog, DialogDescription, DialogHeader, DialogTitle, ResponsiveDialogContent } from "@/components/ui/dialog";
 
 const links = [
   { href: "/dashboard", label: "Проекты", icon: FolderKanban },

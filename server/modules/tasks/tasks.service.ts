@@ -14,7 +14,7 @@ import type { CreateTaskInput, UpdateTaskInput } from "./tasks.schema";
 
 const visibleToUser = (userId: string): Prisma.TaskWhereInput => ({
   OR: [
-    { createdById: userId },
+    { createdById: userId, projectId: null },
     {
       project: {
         is: { OR: [{ userId }, { members: { some: { userId } } }] },
@@ -25,13 +25,14 @@ const visibleToUser = (userId: string): Prisma.TaskWhereInput => ({
 
 const editableByUser = (userId: string): Prisma.TaskWhereInput => ({
   OR: [
-    { createdById: userId },
+    { createdById: userId, projectId: null },
     {
       project: {
         is: {
+          status: "ACTIVE",
           OR: [
-          { userId },
-          { members: { some: { userId, role: "EDITOR" } } },
+            { userId },
+            { members: { some: { userId, role: "EDITOR" } } },
           ],
         },
       },

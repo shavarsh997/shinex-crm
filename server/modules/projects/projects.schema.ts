@@ -20,7 +20,17 @@ export const createProjectSchema = z.object({
   receivedAmount: money.default(0n),
 });
 
-export const updateProjectSchema = createProjectSchema.partial().refine(
+// Financial totals are maintained exclusively by their ledgers: payments and
+// budget adjustments. Keeping them out of the general project update avoids
+// creating a total that cannot be reconciled with the operation history.
+export const updateProjectSchema = z.object({
+  title: z.string().trim().min(1, "Укажите название проекта.").max(160).optional(),
+  description: optionalText,
+  ownerName: z.string().trim().max(160).optional().transform((value) => value || undefined),
+  ownerPhone: z.string().trim().max(60).optional().transform((value) => value || undefined),
+  ownerEmail: optionalEmail,
+  ownerNotes: optionalText,
+}).refine(
   (value) => Object.keys(value).length > 0,
   "Передайте хотя бы одно поле для обновления.",
 );
