@@ -52,14 +52,14 @@ The local Docker database is intentionally development-only; use distinct creden
 
 ## Telegram Mini App
 
-The CRM can be launched as a Telegram Mini App. It does not process chat messages or use a webhook. When a signed-in CRM user opens the app from the bot, the app verifies Telegram's `initData` on the server and links that Telegram account to the CRM user. Each newly added expense is then sent to the same private bot chat as a **Новая выплата** notification.
+The CRM can be launched as a Telegram Mini App. When the bot receives `/start`, it replies with an **Открыть CRM** button. The CRM registers its protected webhook automatically when its Node.js server starts after deployment.
 
-1. Create a bot through [@BotFather](https://t.me/BotFather) and set its Mini App/menu-button URL to the public **HTTPS** URL of this CRM.
-2. Add the bot token to the deployment environment as `TELEGRAM_BOT_TOKEN`; do not put it in a `NEXT_PUBLIC_` variable.
-3. Apply the included database migration with `npm run db:deploy` and deploy the app.
-4. Open the Mini App from the bot, then sign in to the CRM once. Future payouts created by that CRM account will be saved as messages in that same private bot chat.
+1. Create a bot through [@BotFather](https://t.me/BotFather).
+2. In the deployment environment, set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEB_APP_URL` (the public **HTTPS** CRM origin, for example `https://crm.example.com`) and a random `TELEGRAM_WEBHOOK_SECRET` of at least 32 characters. Do not put any of them in a `NEXT_PUBLIC_` variable.
+3. Apply the included database migration with `npm run db:deploy` and deploy the app. On startup, it registers `https://crm.example.com/api/telegram/webhook` with Telegram.
+4. Send `/start` to the bot and use **Открыть CRM**. After signing in through the Mini App once, future payouts created by that CRM account will be sent to the same private bot chat.
 
-Telegram requires the user to have opened the bot before the bot can send a private message. Opening the Mini App from the bot fulfils that requirement.
+Telegram requires a public HTTPS deployment. If the hosting platform starts server instances only when the first request arrives, start the deployed CRM once after deployment so it can register the webhook.
 
 ## Architecture
 
