@@ -13,3 +13,7 @@ export const localeLabels: Record<Locale, string> = {
 export function isLocale(value: string | undefined): value is Locale {
   return Boolean(value && locales.includes(value as Locale));
 }
+
+export function localeToIntl(locale: Locale) {
+  return locale === "hy" ? "hy-AM" : "ru-RU";
+}

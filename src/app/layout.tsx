@@ -7,10 +7,13 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { getLocale } from "@/i18n/locale";
 import { LocaleProvider } from "@/i18n/provider";
 
-export const metadata: Metadata = {
-  title: "Shinex CRM",
-  description: "Управление строительными проектами и расходами.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return {
+    title: "Shinex CRM",
+    description: locale === "hy" ? "Շինարարական նախագծերի և ծախսերի կառավարում։" : "Управление строительными проектами и расходами.",
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
