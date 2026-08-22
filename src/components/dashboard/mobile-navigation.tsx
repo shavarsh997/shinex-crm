@@ -2,19 +2,25 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Ellipsis, FolderKanban, ListTodo, ShieldCheck, UserRound, Zap } from "lucide-react";
+import { BarChart3, Ellipsis, FolderKanban, Languages, ListTodo, Moon, ShieldCheck, Sun, UserRound, Zap } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { localeCookieName, locales } from "@/i18n/config";
 import { useTranslations } from "@/i18n/provider";
+
+const themeStorageKey = "shinex-theme";
 
 export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useTranslations();
+  const { locale, t } = useTranslations();
   const primaryLinks = [
     { href: "/dashboard", label: t("nav.projects"), icon: FolderKanban },
     { href: "/dashboard/tasks", label: t("nav.tasks"), icon: ListTodo },
@@ -25,6 +31,21 @@ export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
     { href: "/dashboard/profile", label: t("nav.profile"), icon: UserRound },
     ...(isAdmin ? [{ href: "/dashboard/access", label: t("nav.access"), icon: ShieldCheck }] : []),
   ];
+
+  function toggleTheme() {
+    const nextTheme = document.documentElement.classList.contains("dark") ? "light" : "dark";
+
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    localStorage.setItem(themeStorageKey, nextTheme);
+  }
+
+  function toggleLocale() {
+    const nextLocale = locale === locales[0] ? locales[1] : locales[0];
+
+    document.cookie = `${localeCookieName}=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
+    document.documentElement.lang = nextLocale;
+    router.refresh();
+  }
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/90 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
@@ -47,6 +68,20 @@ export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
                 {label}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator className="my-2" />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="px-4 pt-1 text-sm">{t("settings.title")}</DropdownMenuLabel>
+              <DropdownMenuItem onClick={toggleTheme} className="min-h-14 gap-3 rounded-xl px-4 py-3 text-base [&_svg]:size-5">
+                <Sun className="hidden dark:block" aria-hidden="true" />
+                <Moon className="dark:hidden" aria-hidden="true" />
+                {t("theme.title")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleLocale} className="min-h-14 gap-3 rounded-xl px-4 py-3 text-base [&_svg]:size-5">
+                <Languages aria-hidden="true" />
+                <span>{t("language.label")}</span>
+                <span className="ml-auto text-sm text-muted-foreground">{locale === locales[0] ? t("language.ru") : t("language.hy")}</span>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

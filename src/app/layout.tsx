@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 
-import { SettingsMenu } from "@/components/settings-menu";
 import { getLocale } from "@/i18n/locale";
 import { LocaleProvider } from "@/i18n/provider";
 
@@ -33,7 +32,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Script src="https://telegram.org/js/telegram-web-app.js?58" strategy="beforeInteractive" />
         <LocaleProvider locale={locale}>
           {children}
-          <SettingsMenu />
         </LocaleProvider>
       </body>
     </html>
