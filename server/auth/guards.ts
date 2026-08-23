@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { ForbiddenError, UnauthorizedError } from "@/server/shared/errors";
@@ -42,7 +43,7 @@ export async function requireProjectEditor() {
   return user;
 }
 
-export async function getAuthenticatedUser() {
+export const getAuthenticatedUser = cache(async function getAuthenticatedUser() {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -50,4 +51,4 @@ export async function getAuthenticatedUser() {
   }
 
   return user;
-}
+});

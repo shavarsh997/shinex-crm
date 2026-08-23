@@ -11,7 +11,21 @@ import { getTranslations } from "@/i18n/server";
 export default async function DashboardPage() {
   const { locale, t } = await getTranslations();
   const user = await getAuthenticatedUser();
-  const [projects, activeTaskCount] = await Promise.all([getUserProjects(user.id), getActiveTaskCount(user.id)]);
+  let projects: Awaited<ReturnType<typeof getUserProjects>>;
+  let activeTaskCount: number;
+
+  try {
+    [projects, activeTaskCount] = await Promise.all([getUserProjects(user.id), getActiveTaskCount(user.id)]);
+  } catch (error) {
+    // Keep the response renderable on iOS and preserve the original exception
+    // in Vercel's function logs for diagnosis.
+    console.error("Dashboard data loading failed", { userId: user.id, error });
+
+    const diagnostic = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+
+    return <div className="flex min-h-72 flex-col items-center justify-center p-8 text-center"><h1 className="text-lg font-semibold">{t("error.dashboardTitle")}</h1><p className="mt-2 max-w-sm text-sm text-muted-foreground">{t("error.dashboardDescription")}</p>{user.role === "ADMIN" && <pre className="mt-5 w-full max-w-2xl overflow-x-auto rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-left text-xs leading-5 text-destructive whitespace-pre-wrap" role="alert">{diagnostic}</pre>}<Link className="mt-5 text-sm font-medium text-primary underline underline-offset-4" href="/dashboard">{t("common.retry")}</Link></div>;
+  }
+
   const totalBudget = projects.reduce((sum, project) => sum + project.estimatedAmount, 0n);
   const totalSpent = projects.reduce((sum, project) => sum + project.spentAmount, 0n);
   const canEditProjects = user.role !== "MEMBER";
