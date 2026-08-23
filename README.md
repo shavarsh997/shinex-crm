@@ -26,6 +26,14 @@ docker compose -f docker-compose.production.yml up -d --build
 
 The one-time `migrate` container applies migrations first; only after it succeeds does the production `app` container start `node server.js` with `NODE_ENV=production`. It has no source-code volume and cannot show Next.js development UI.
 
+### Production on Vercel
+
+The public domain is served by Vercel. The committed `vercel.json` runs
+`prisma migrate deploy` before a **production** build, so the database schema
+cannot lag behind the deployed application code. Set `DATABASE_URL` for the
+Production environment in Vercel Project Settings. Preview builds deliberately
+skip migrations to avoid changing the production database from a branch build.
+
 ### Production data protection
 
 Before real use, deploy PostgreSQL with automated encrypted backups and point-in-time recovery. Regularly restore one backup into an isolated environment and verify that the CRM starts and its financial totals reconcile. A Docker volume is persistent storage, not a backup.
