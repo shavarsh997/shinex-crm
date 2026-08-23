@@ -42,7 +42,19 @@ Financial writes use an idempotency key and are serialized per project. API cons
 6. Set `ADMIN_EMAIL` to the email address for the first administrator.
 7. Start the application: `npm run dev`
 
-Register the configured administrator email through the normal registration form to create the first administrator. No demo users, passwords, projects, or expenses are included.
+### Demo data
+
+For a local development database, run `npm run db:seed` after applying the
+migrations. The seed is idempotent: subsequent runs do not create duplicate
+records. It creates an approved administrator, one project, a payment, three
+expenses, and three tasks.
+
+By default, the administrator is `admin@shinex.local` with password
+`ChangeMe123!`. Override these development-only values through
+`SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env`. Do not run the demo
+seed against a production database.
+
+Register the configured administrator email through the normal registration form to create the first administrator. Demo data is never inserted automatically; add it only with `npm run db:seed` in a local environment.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -56,6 +68,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run db:migrate -- --name descriptive_change` — create and apply a migration.
 - `npm run db:deploy` — apply existing migrations without creating new ones.
 - `npm run db:studio` — open Prisma Studio.
+- `npm run db:seed` — insert the default development data.
 
 ## Access control
 
