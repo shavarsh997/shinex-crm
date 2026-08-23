@@ -6,8 +6,6 @@ type TelegramWebApp = {
   initData: string;
   ready: () => void;
   expand: () => void;
-  isFullscreen?: boolean;
-  requestFullscreen?: () => void;
 };
 
 declare global {
@@ -24,9 +22,6 @@ export function TelegramWebAppBridge() {
 
     webApp.ready();
     webApp.expand();
-    if (!webApp.isFullscreen) {
-      webApp.requestFullscreen?.();
-    }
 
     if (!webApp.initData) return;
 
@@ -34,6 +29,10 @@ export function TelegramWebAppBridge() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initData: webApp.initData }),
+    }).catch((error: unknown) => {
+      // A failed background link must not become an unhandled rejection in
+      // the mobile WebView.
+      console.warn("Telegram account connection failed", error);
     });
   }, []);
 
