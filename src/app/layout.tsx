@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 
+import { TelegramWebAppBootstrap } from "@/components/telegram/telegram-web-app";
 import { getLocale } from "@/i18n/locale";
 import { LocaleProvider } from "@/i18n/provider";
+import { scheduleTelegramIntegrationSync } from "@/server/modules/telegram/telegram-sync-schedule";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -15,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
+  scheduleTelegramIntegrationSync();
   return (
     <html
       lang={locale}
@@ -31,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Script src="https://telegram.org/js/telegram-web-app.js?58" strategy="beforeInteractive" />
         <LocaleProvider locale={locale}>
+          <TelegramWebAppBootstrap />
           {children}
         </LocaleProvider>
       </body>

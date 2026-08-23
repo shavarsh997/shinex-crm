@@ -27,11 +27,23 @@ function getSessionExpiry() {
   return new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1_000);
 }
 
+function sessionCookieOptions(telegramMiniApp: boolean) {
+  return {
+    httpOnly: true,
+    path: "/",
+    // Telegram Web loads the Mini App in a cross-site iframe. SameSite=Lax
+    // cookies are stored there and the user is sent back to login after a
+    // successful sign-in.
+    sameSite: telegramMiniApp ? "none" : "lax",
+    secure: telegramMiniApp || process.env.NODE_ENV === "production",
+  } as const;
+}
+
 /**
  * Creates the only authentication token used by the application. The browser
  * receives the opaque value, while PostgreSQL keeps only its SHA-256 hash.
  */
-export async function createSession(userId: string) {
+export async function createSession(userId: string, { telegramMiniApp = false }: { telegramMiniApp?: boolean } = {}) {
   const token = randomBytes(32).toString("base64url");
   const expires = getSessionExpiry();
 
@@ -50,10 +62,7 @@ export async function createSession(userId: string) {
   });
 
   (await cookies()).set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
+    ...sessionCookieOptions(telegramMiniApp),
     expires,
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -98,7 +107,17 @@ export async function deleteSession() {
     });
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  const expired = new Date(0);
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    ...sessionCookieOptions(false),
+    expires: expired,
+    maxAge: 0,
+  });
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    ...sessionCookieOptions(true),
+    expires: expired,
+    maxAge: 0,
+  });
 }
 
 export async function signOut({ redirectTo }: { redirectTo?: string } = {}) {

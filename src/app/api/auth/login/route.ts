@@ -1,16 +1,25 @@
+import { z } from "zod";
+
 import { authenticateWithPassword, credentialsSchema } from "@/server/auth/credentials";
 import { createSession } from "@/server/auth/service";
 import { withErrorHandling } from "@/server/shared/http";
 import { enforceRateLimit, getRequestClientKey } from "@/server/shared/security/rate-limit";
 import { parseRequestBody } from "@/server/shared/validation";
 
+const loginSchema = credentialsSchema.extend({
+  telegramMiniApp: z.boolean().optional(),
+});
+
 export const POST = withErrorHandling(async (request) => {
-  const input = await parseRequestBody(request, credentialsSchema);
+  const input = await parseRequestBody(request, loginSchema);
   enforceRateLimit(`login:${getRequestClientKey(request)}:${input.email}`, {
     limit: 5,
     windowMs: 15 * 60 * 1_000,
   });
-  const user = await authenticateWithPassword(input);
+  const user = await authenticateWithPassword({
+    email: input.email,
+    password: input.password,
+  });
 
   if (!user) {
     return Response.json(
@@ -19,7 +28,7 @@ export const POST = withErrorHandling(async (request) => {
     );
   }
 
-  await createSession(user.id);
+  await createSession(user.id, { telegramMiniApp: input.telegramMiniApp === true });
 
   return Response.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });

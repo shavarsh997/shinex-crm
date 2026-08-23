@@ -1,3 +1,4 @@
+import { scheduleTelegramIntegrationSync } from "@/server/modules/telegram/telegram-sync-schedule";
 import {
   isValidTelegramWebhookSecret,
   resetTelegramChatMenuButton,
@@ -15,6 +16,8 @@ type TelegramUpdate = {
 };
 
 export async function POST(request: Request) {
+  scheduleTelegramIntegrationSync();
+
   if (!isValidTelegramWebhookSecret(request.headers.get("x-telegram-bot-api-secret-token"))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

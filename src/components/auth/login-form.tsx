@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { isTelegramMiniApp } from "@/components/telegram/telegram-web-app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
@@ -55,8 +56,9 @@ export function LoginForm({ accessDenied = false }: { accessDenied?: boolean }) 
 
       const response = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, telegramMiniApp: isTelegramMiniApp() }),
       });
       const body = await response.json() as {
         error?: { details?: Array<{ message?: string }>; message?: string };

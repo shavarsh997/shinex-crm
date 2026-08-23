@@ -4,6 +4,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { prisma } from "@/server/db/prisma";
 import { ConflictError, UnauthorizedError } from "@/server/shared/errors";
+import { shouldAutoSynchronizeTelegramIntegration } from "./telegram.runtime";
+
+export { shouldAutoSynchronizeTelegramIntegration };
 
 const MAX_INIT_DATA_AGE_SECONDS = 24 * 60 * 60;
 const telegramApiBaseUrl = "https://api.telegram.org";
@@ -222,12 +225,21 @@ export async function synchronizeTelegramIntegration({
   };
 }
 
-/** Runs a best-effort integration sync every time a new server instance starts. */
+/** Runs a best-effort integration sync when a production server instance starts. */
 export async function registerTelegramIntegration() {
+  if (!shouldAutoSynchronizeTelegramIntegration()) {
+    return {
+      configured: false,
+      menuButton: { ok: true },
+      webhook: { ok: true },
+      chatMenuButtons: { total: 0, reset: 0, failed: 0, skipped: true },
+    } satisfies TelegramIntegrationSyncResult;
+  }
+
   const result = await synchronizeTelegramIntegration();
 
   if (!result.configured) {
-    return;
+    return result;
   }
 
   if (!result.menuButton.ok) {
@@ -236,6 +248,8 @@ export async function registerTelegramIntegration() {
   if (!result.webhook.ok) {
     console.error("Telegram webhook registration failed", result.webhook.error);
   }
+
+  return result;
 }
 
 /**

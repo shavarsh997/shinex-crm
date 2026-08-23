@@ -91,14 +91,19 @@ The local Docker database is intentionally development-only; use distinct creden
 
 ## Telegram Mini App
 
-The CRM can be launched as a Telegram Mini App. The **Открыть CRM** menu button is configured as the bot's default button, so it has one stable URL for every private chat. The CRM registers its protected webhook and menu button independently when its Node.js server starts after deployment: a temporary webhook failure cannot prevent the Mini App button from being updated.
+The CRM can be launched as a Telegram Mini App. The **Открыть CRM** menu button is the bot's default button, so every private chat uses the same production HTTPS origin.
+
+Telegram env vars must exist only on the **Production** environment in Vercel (or the production Docker host). Do not copy `TELEGRAM_BOT_TOKEN` onto Preview: a preview deployment would overwrite the live menu button and webhook.
+
+On Vercel the first production page view registers the menu button and `https://crm.example.com/api/telegram/webhook` in the background. Preview and `next dev` never do this automatically. Docker `next start` still registers on process boot.
 
 1. Create a bot through [@BotFather](https://t.me/BotFather).
-2. In the deployment environment, set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEB_APP_URL` (the public **HTTPS** CRM origin, for example `https://crm.example.com`) and a random `TELEGRAM_WEBHOOK_SECRET` of at least 32 characters. Do not put any of them in a `NEXT_PUBLIC_` variable.
-3. Apply the included database migration with `npm run db:deploy` and deploy the app. On startup, it registers `https://crm.example.com/api/telegram/webhook` with Telegram.
-4. After changing the public domain or deploying this update, sign in as an administrator and open **Доступы** in the CRM. Choose **Синхронизировать Telegram** once. It refreshes the default button, registers the webhook separately, and removes obsolete per-chat URLs for linked CRM users. A user with an old button who has not linked their CRM account can send the bot one message (for example, `/start`) to reset that chat as well. The bot does not reply. The Mini App expands to the maximum available height. After signing in through the Mini App once, future payouts created by that CRM account will be sent to the same private bot chat.
+2. In the **production** environment, set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEB_APP_URL` (the public **HTTPS** CRM origin, for example `https://crm.example.com`) and a random `TELEGRAM_WEBHOOK_SECRET` of at least 32 characters. Do not put any of them in a `NEXT_PUBLIC_` variable.
+3. Apply the included database migration with `npm run db:deploy` and deploy. Open the production URL once (or open the Mini App) so the app can register the webhook after the deployment is reachable.
+4. After changing the public domain, sign in as an administrator and open **Доступы**. Choose **Синхронизировать Telegram** once. That also removes obsolete per-chat URLs for linked CRM users. A user with an old button who has not linked their CRM account can send the bot one message (for example, `/start`) to reset that chat. The bot does not reply.
+5. If Vercel Deployment Protection is on, allow unauthenticated access to `/api/telegram/webhook`. Otherwise Telegram cannot deliver updates and stale chat buttons will not reset.
 
-Telegram requires a public HTTPS deployment. If the hosting platform starts server instances only when the first request arrives, start the deployed CRM once after deployment so it can register the webhook.
+The Mini App expands to the maximum available height on login and after sign-in. After signing in through the Mini App once, future payouts created by that CRM account are sent to the same private bot chat. Telegram Web (iframe) uses a `SameSite=None` session cookie; a regular browser login keeps `SameSite=Lax`.
 
 ## Architecture
 
