@@ -3,6 +3,6 @@ export async function register() {
     return;
   }
 
-  const { registerTelegramWebhook } = await import("./server/modules/telegram/telegram.service");
-  await registerTelegramWebhook();
+  const { registerTelegramIntegration } = await import("./server/modules/telegram/telegram.service");
+  await registerTelegramIntegration();
 }

@@ -1,6 +1,6 @@
 import {
   isValidTelegramWebhookSecret,
-  registerTelegramChatMenuButton,
+  resetTelegramChatMenuButton,
 } from "@/server/modules/telegram/telegram.service";
 
 export const runtime = "nodejs";
@@ -29,10 +29,12 @@ export async function POST(request: Request) {
   const chat = update.message?.chat;
   if (chat?.type === "private" && typeof chat.id === "number" && Number.isSafeInteger(chat.id)) {
     try {
-      await registerTelegramChatMenuButton(String(chat.id));
+      // Older versions configured an explicit Web App URL for each chat. Reset
+      // it on the next message so this chat inherits the current default URL.
+      await resetTelegramChatMenuButton(String(chat.id));
     } catch (error) {
-      console.error("Telegram chat menu button registration failed", error);
-      return Response.json({ error: "Telegram menu button registration failed" }, { status: 502 });
+      console.error("Telegram chat menu button reset failed", error);
+      return Response.json({ error: "Telegram chat menu button reset failed" }, { status: 502 });
     }
   }
 

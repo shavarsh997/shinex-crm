@@ -19,6 +19,26 @@ type TelegramMenuButton = {
   web_app: { url: string };
 };
 
+type TelegramDefaultMenuButton = {
+  type: "default";
+};
+
+type TelegramSyncStep =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export type TelegramIntegrationSyncResult = {
+  configured: boolean;
+  menuButton: TelegramSyncStep;
+  webhook: TelegramSyncStep;
+  chatMenuButtons: {
+    total: number;
+    reset: number;
+    failed: number;
+    skipped: boolean;
+  };
+};
+
 function getBotToken() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -106,16 +126,50 @@ async function registerTelegramMenuButton() {
   });
 }
 
-/** Makes the CRM available from the menu button beside the input in one private bot chat. */
-export async function registerTelegramChatMenuButton(chatId: string) {
+/** Removes a per-chat override so the chat inherits the bot's current default menu button. */
+export async function resetTelegramChatMenuButton(chatId: string) {
+  const menuButton: TelegramDefaultMenuButton = { type: "default" };
+
   await callTelegramApi("setChatMenuButton", {
     chat_id: chatId,
-    menu_button: createTelegramMenuButton(),
+    menu_button: menuButton,
   });
 }
 
-/** Registers this deployment as the bot's webhook receiver when the server starts. */
-export async function registerTelegramWebhook() {
+/** Registers this deployment as the bot's webhook receiver. */
+async function registerTelegramWebhook() {
+  const webAppUrl = getTelegramWebAppUrl();
+  const webhookUrl = new URL("/api/telegram/webhook", webAppUrl).toString();
+
+  await callTelegramApi("setWebhook", {
+    url: webhookUrl,
+    secret_token: getTelegramWebhookSecret(),
+    allowed_updates: ["message"],
+  });
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function runTelegramSyncStep(action: () => Promise<void>): Promise<TelegramSyncStep> {
+  try {
+    await action();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+/**
+ * Updates Telegram's default menu button and webhook independently. The Mini
+ * App remains launchable even if Telegram cannot currently reach the webhook.
+ */
+export async function synchronizeTelegramIntegration({
+  resetLinkedChatMenuButtons = false,
+}: {
+  resetLinkedChatMenuButtons?: boolean;
+} = {}): Promise<TelegramIntegrationSyncResult> {
   const configurationProvided = Boolean(
     process.env.TELEGRAM_BOT_TOKEN
     || process.env.TELEGRAM_WEB_APP_URL
@@ -123,21 +177,64 @@ export async function registerTelegramWebhook() {
   );
 
   if (!configurationProvided) {
+    return {
+      configured: false,
+      menuButton: { ok: true },
+      webhook: { ok: true },
+      chatMenuButtons: { total: 0, reset: 0, failed: 0, skipped: true },
+    };
+  }
+
+  const [menuButton, webhook] = await Promise.all([
+    runTelegramSyncStep(registerTelegramMenuButton),
+    runTelegramSyncStep(registerTelegramWebhook),
+  ]);
+
+  if (!resetLinkedChatMenuButtons || !menuButton.ok) {
+    return {
+      configured: true,
+      menuButton,
+      webhook,
+      chatMenuButtons: { total: 0, reset: 0, failed: 0, skipped: true },
+    };
+  }
+
+  const linkedUsers = await prisma.user.findMany({
+    where: { telegramUserId: { not: null } },
+    select: { telegramUserId: true },
+  });
+  const resetResults = await Promise.all(
+    linkedUsers.map(({ telegramUserId }) => runTelegramSyncStep(
+      () => resetTelegramChatMenuButton(telegramUserId!),
+    )),
+  );
+
+  return {
+    configured: true,
+    menuButton,
+    webhook,
+    chatMenuButtons: {
+      total: linkedUsers.length,
+      reset: resetResults.filter((result) => result.ok).length,
+      failed: resetResults.filter((result) => !result.ok).length,
+      skipped: false,
+    },
+  };
+}
+
+/** Runs a best-effort integration sync every time a new server instance starts. */
+export async function registerTelegramIntegration() {
+  const result = await synchronizeTelegramIntegration();
+
+  if (!result.configured) {
     return;
   }
 
-  try {
-    const webAppUrl = getTelegramWebAppUrl();
-    const webhookUrl = new URL("/api/telegram/webhook", webAppUrl).toString();
-
-    await callTelegramApi("setWebhook", {
-      url: webhookUrl,
-      secret_token: getTelegramWebhookSecret(),
-      allowed_updates: ["message"],
-    });
-    await registerTelegramMenuButton();
-  } catch (error) {
-    console.error("Telegram integration registration failed", error);
+  if (!result.menuButton.ok) {
+    console.error("Telegram menu button registration failed", result.menuButton.error);
+  }
+  if (!result.webhook.ok) {
+    console.error("Telegram webhook registration failed", result.webhook.error);
   }
 }
 

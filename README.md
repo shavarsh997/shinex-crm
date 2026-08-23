@@ -91,12 +91,12 @@ The local Docker database is intentionally development-only; use distinct creden
 
 ## Telegram Mini App
 
-The CRM can be launched as a Telegram Mini App. The **Открыть CRM** menu button is kept beside the input in every private chat with the bot; no launch message with an inline button is needed. The CRM registers its protected webhook and menu button automatically when its Node.js server starts after deployment.
+The CRM can be launched as a Telegram Mini App. The **Открыть CRM** menu button is configured as the bot's default button, so it has one stable URL for every private chat. The CRM registers its protected webhook and menu button independently when its Node.js server starts after deployment: a temporary webhook failure cannot prevent the Mini App button from being updated.
 
 1. Create a bot through [@BotFather](https://t.me/BotFather).
 2. In the deployment environment, set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEB_APP_URL` (the public **HTTPS** CRM origin, for example `https://crm.example.com`) and a random `TELEGRAM_WEBHOOK_SECRET` of at least 32 characters. Do not put any of them in a `NEXT_PUBLIC_` variable.
 3. Apply the included database migration with `npm run db:deploy` and deploy the app. On startup, it registers `https://crm.example.com/api/telegram/webhook` with Telegram.
-4. Open a private chat with the bot and send it one message (for example, `/start`) once. The bot will not reply; it assigns **Открыть CRM** beside the message input for that chat. The Mini App requests fullscreen mode when the Telegram client supports it and otherwise expands to the maximum available height. After signing in through the Mini App once, future payouts created by that CRM account will be sent to the same private bot chat.
+4. After changing the public domain or deploying this update, sign in as an administrator and open **Доступы** in the CRM. Choose **Синхронизировать Telegram** once. It refreshes the default button, registers the webhook separately, and removes obsolete per-chat URLs for linked CRM users. A user with an old button who has not linked their CRM account can send the bot one message (for example, `/start`) to reset that chat as well. The bot does not reply. The Mini App expands to the maximum available height. After signing in through the Mini App once, future payouts created by that CRM account will be sent to the same private bot chat.
 
 Telegram requires a public HTTPS deployment. If the hosting platform starts server instances only when the first request arrives, start the deployed CRM once after deployment so it can register the webhook.
 
