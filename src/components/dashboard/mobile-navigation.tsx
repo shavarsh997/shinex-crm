@@ -17,6 +17,10 @@ import { useTranslations } from "@/i18n/provider";
 
 const themeStorageKey = "shinex-theme";
 
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -51,13 +55,13 @@ export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/90 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-3 items-end">
         {primaryLinks.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium ${pathname === href ? "text-blue-600" : "text-muted-foreground"}`}>
-            <Icon className="size-[19px]" strokeWidth={pathname === href ? 2.5 : 1.9} />
+          <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium ${isActivePath(pathname, href) ? "text-blue-600" : "text-muted-foreground"}`}>
+            <Icon className="size-[19px]" strokeWidth={isActivePath(pathname, href) ? 2.5 : 1.9} />
             {label}
           </Link>
         ))}
         <DropdownMenu>
-          <DropdownMenuTrigger className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 text-[10px] font-medium ${moreLinks.some(({ href }) => pathname === href) ? "text-blue-600" : "text-muted-foreground"}`} aria-label={t("nav.more")}>
+          <DropdownMenuTrigger className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 text-[10px] font-medium ${moreLinks.some(({ href }) => isActivePath(pathname, href)) ? "text-blue-600" : "text-muted-foreground"}`} aria-label={t("nav.more")}>
             <Ellipsis className="size-[21px]" strokeWidth={2} />
             {t("nav.more")}
           </DropdownMenuTrigger>
