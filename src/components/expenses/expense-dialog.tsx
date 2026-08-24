@@ -7,7 +7,7 @@ import { CalendarDays, Plus, ReceiptText, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { ExpenseView } from "./expense-list";
+import type { EmployeeOption, ExpenseView } from "./expense-list";
 
 const types = [
   { value: "EMPLOYEE", label: "Зарплата" },
@@ -19,7 +19,7 @@ const types = [
   { value: "OTHER", label: "Другое" },
 ] as const;
 
-export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact = false }: { projectId: string; expense?: ExpenseView; open?: boolean; onOpenChange?: (open: boolean) => void; compact?: boolean }) {
+export function ExpenseDialog({ projectId, employees, expense, open, onOpenChange, compact = false }: { projectId: string; employees: EmployeeOption[]; expense?: ExpenseView; open?: boolean; onOpenChange?: (open: boolean) => void; compact?: boolean }) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const [type, setType] = useState<ExpenseView["type"]>(expense?.type ?? "MATERIAL");
@@ -61,8 +61,8 @@ export function ExpenseDialog({ projectId, expense, open, onOpenChange, compact 
         {!expense && <input name="clientRequestId" type="hidden" value={clientRequestId} />}
         <label className="grid gap-2 text-sm font-semibold text-slate-700">Сумма, AMD<div className="relative"><Input required name="amount" inputMode="numeric" defaultValue={expense?.amount} placeholder="0" className="h-16 rounded-2xl border-slate-200 pr-14 text-3xl font-semibold tracking-[-0.05em]" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">AMD</span></div></label>
         <div><p className="mb-2 text-sm font-semibold text-slate-700">Категория</p><label className="relative block"><select name="type" value={type} onChange={(event) => setType(event.target.value as ExpenseView["type"])} className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium outline-none focus:ring-3 focus:ring-blue-100">{types.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><ReceiptText className="pointer-events-none absolute right-4 top-3.5 size-5 text-slate-400" /></label></div>
-        {isSalary && <label className="grid gap-2 text-sm font-semibold text-slate-700">Сотрудник, получивший зарплату<div className="relative"><Input required name="employeeName" defaultValue={expense?.employeeName || ""} placeholder="Имя и фамилия сотрудника" className="h-12 rounded-2xl border-slate-200 pl-11" /><UserRound className="pointer-events-none absolute left-4 top-3.5 size-5 text-slate-400" /></div></label>}
-        {!isSalary && <Input name="employeeName" defaultValue="" className="hidden" />}
+        {isSalary && <label className="grid gap-2 text-sm font-semibold text-slate-700">Работник, получивший зарплату<div className="relative"><select required name="employeeId" defaultValue={expense?.employeeId || ""} disabled={employees.length === 0} className="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-white px-11 text-sm outline-none focus:ring-3 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"><option value="">{employees.length ? "Выберите работника" : "Сначала создайте работника"}</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}{employee.profession ? ` · ${employee.profession}` : ""}</option>)}</select><UserRound className="pointer-events-none absolute left-4 top-3.5 size-5 text-slate-400" /></div>{employees.length === 0 && <span className="text-xs font-normal text-slate-500">Добавьте работника в разделе «Работники», затем вернитесь к выплате.</span>}</label>}
+        <Input name="employeeName" defaultValue="" className="hidden" />
         <label className="grid gap-2 text-sm font-semibold text-slate-700">Описание<Input required name="title" defaultValue={expense?.title} placeholder={isSalary ? "Например: зарплата за август" : "На что потратили?"} className="h-12 rounded-2xl border-slate-200 px-4" /></label>
         <label className="grid gap-2 text-sm font-semibold text-slate-700">Дата<div className="relative"><Input required name="date" type="date" defaultValue={date} className="h-12 rounded-2xl border-slate-200 px-4" /><CalendarDays className="pointer-events-none absolute right-4 top-3.5 size-5 text-slate-400" /></div></label>
         <details className="rounded-2xl bg-slate-50 p-4"><summary className="cursor-pointer text-sm font-semibold text-slate-700">Поставщик и комментарий</summary><div className="mt-4 grid gap-4">{!isSalary && <label className="grid gap-1.5 text-sm font-medium">Поставщик / получатель<Input name="vendorName" defaultValue={expense?.vendorName || ""} className="h-11 rounded-xl border-slate-200" /></label>}{isSalary && <Input name="vendorName" defaultValue="" className="hidden" />}<label className="grid gap-1.5 text-sm font-medium">Комментарий<textarea name="description" defaultValue={expense?.description || ""} rows={2} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-blue-100" /></label><Input name="notes" defaultValue={expense?.notes || ""} className="hidden" /></div></details>

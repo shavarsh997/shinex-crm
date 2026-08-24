@@ -5,9 +5,9 @@ import { createExpenseSchema, updateExpenseSchema } from "./expenses.schema";
 const clientRequestId = "b65b3ed0-ded3-4fac-85f0-4e0ea8e1b990";
 
 describe("expense schemas", () => {
-  it("requires a stable retry key and employee name for a new salary", () => {
+  it("requires a stable retry key and worker for a new salary", () => {
     expect(createExpenseSchema.safeParse({ type: "EMPLOYEE", title: "Зарплата", amount: "1000", date: "2026-08-22", clientRequestId }).success).toBe(false);
-    expect(createExpenseSchema.safeParse({ type: "EMPLOYEE", title: "Зарплата", amount: "1000", date: "2026-08-22", employeeName: "Арман", clientRequestId }).success).toBe(true);
+    expect(createExpenseSchema.safeParse({ type: "EMPLOYEE", title: "Зарплата", amount: "1000", date: "2026-08-22", employeeId: "clz6rh87y0000i0w5rv2d1q3s", clientRequestId }).success).toBe(true);
   });
 
   it("turns intentionally cleared optional fields into database null values", () => {

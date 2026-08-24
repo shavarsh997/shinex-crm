@@ -66,6 +66,7 @@ model User {
   sessions      Session[]
   projects      Project[]
   projectMemberships ProjectMember[]
+  employees     Employee[]
   createdTasks     Task[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -111,6 +112,7 @@ model Expense {
   amount       BigInt
   date         DateTime
   employeeName String?
+  employeeId   String?
   vendorName   String?
   notes        String?     @db.Text
   createdAt    DateTime    @default(now())
@@ -118,9 +120,25 @@ model Expense {
   deletedAt    DateTime?
   clientRequestId String?  @unique
   project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employee     Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
 
   @@index([projectId, date])
   @@index([projectId, deletedAt, date])
+  @@index([employeeId, deletedAt, date])
+}
+
+model Employee {
+  id         String    @id @default(cuid())
+  userId     String
+  fullName   String
+  profession String?
+  phone      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses   Expense[]
+
+  @@index([userId, fullName])
 }
 
 model Payment {

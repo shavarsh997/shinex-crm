@@ -20,7 +20,7 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
     },
     select: {
       id: true, projectId: true, type: true, title: true, amount: true, date: true,
-      description: true, employeeName: true, vendorName: true, notes: true,
+      description: true, employeeName: true, employeeId: true, vendorName: true, notes: true,
       project: { select: { status: true } },
     },
   });
@@ -38,7 +38,7 @@ export function findDeletedExpenseForUser(db: DbClient, expenseId: string, userI
     },
     select: {
       id: true, projectId: true, type: true, title: true, amount: true, date: true,
-      description: true, employeeName: true, vendorName: true, notes: true,
+      description: true, employeeName: true, employeeId: true, vendorName: true, notes: true,
       project: { select: { status: true } },
     },
   });
@@ -47,10 +47,10 @@ export function findDeletedExpenseForUser(db: DbClient, expenseId: string, userI
 export function createExpense(
   db: DbClient,
   projectId: string,
-  data: Omit<Prisma.ExpenseCreateInput, "project">,
+  data: Omit<Prisma.ExpenseUncheckedCreateInput, "projectId">,
 ) {
   return db.expense.create({
-    data: { ...data, project: { connect: { id: projectId } } },
+    data: { ...data, projectId },
   });
 }
 

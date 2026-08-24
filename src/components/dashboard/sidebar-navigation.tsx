@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderKanban, LayoutDashboard, ListTodo, ShieldCheck } from "lucide-react";
+import { FolderKanban, LayoutDashboard, ListTodo, ShieldCheck, UsersRound } from "lucide-react";
 
 type NavigationLabels = {
   dashboard: string;
   projects: string;
   tasks: string;
+  employees: string;
   access: string;
 };
 
@@ -21,6 +22,7 @@ export function SidebarNavigation({ isAdmin, labels }: { isAdmin: boolean; label
     { href: "/dashboard", label: labels.dashboard, icon: LayoutDashboard },
     { href: "/dashboard", activeHref: "/dashboard/projects", label: labels.projects, icon: FolderKanban },
     { href: "/dashboard/tasks", label: labels.tasks, icon: ListTodo },
+    { href: "/dashboard/employees", label: labels.employees, icon: UsersRound },
     ...(isAdmin ? [{ href: "/dashboard/access", label: labels.access, icon: ShieldCheck }] : []),
   ];
 

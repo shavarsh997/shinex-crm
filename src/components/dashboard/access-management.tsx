@@ -4,6 +4,7 @@ import { CircleCheck, CircleX, Clock3, PauseCircle, Save, ShieldCheck, Undo2 } f
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/users/user-avatar";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -164,10 +165,13 @@ export function AccessManagement({ currentUserId, users }: {
         return (
           <article key={user.id} className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex flex-col justify-between gap-3 sm:flex-row">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Заявка на доступ</p>
-                <h2 className="mt-1 font-medium">{user.name || "Без имени"}</h2>
-                <p className="text-sm text-muted-foreground">{user.email || "Email не указан"}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <UserAvatar userId={user.id} name={user.name} email={user.email} className="size-10 rounded-xl text-xs" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Заявка на доступ</p>
+                  <h2 className="mt-1 truncate font-medium">{user.name || "Без имени"}</h2>
+                  <p className="truncate text-sm text-muted-foreground">{user.email || "Email не указан"}</p>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">Подана: {dateFormatter.format(new Date(user.createdAt))}</p>
             </div>

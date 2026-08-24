@@ -18,14 +18,15 @@ const expenseFields = z.object({
   date: z.coerce.date(),
   description: optionalText,
   employeeName: z.string().trim().max(160).optional().transform((value) => value || undefined),
+  employeeId: z.string().cuid().optional(),
   vendorName: z.string().trim().max(160).optional().transform((value) => value || undefined),
   notes: optionalText,
   clientRequestId: z.uuid("Некорректный ключ операции."),
 });
 
 export const createExpenseSchema = expenseFields.refine(
-  (value) => value.type !== "EMPLOYEE" || Boolean(value.employeeName),
-  { message: "Укажите сотрудника, получившего зарплату.", path: ["employeeName"] },
+  (value) => value.type !== "EMPLOYEE" || Boolean(value.employeeId),
+  { message: "Выберите работника, получившего зарплату.", path: ["employeeId"] },
 );
 
 export const updateExpenseSchema = z.object({
@@ -35,6 +36,7 @@ export const updateExpenseSchema = z.object({
   date: z.coerce.date().optional(),
   description: nullableOptionalText,
   employeeName: nullableOptionalName,
+  employeeId: z.string().cuid().nullable().optional(),
   vendorName: nullableOptionalName,
   notes: nullableOptionalText,
 }).refine(
