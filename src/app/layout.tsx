@@ -12,6 +12,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Shinex CRM",
     description: locale === "hy" ? "Շինարարական նախագծերի և ծախսերի կառավարում։" : "Управление строительными проектами и расходами.",
+    icons: {
+      icon: "/icon.svg",
+      shortcut: "/icon.svg",
+    },
   };
 }
 
