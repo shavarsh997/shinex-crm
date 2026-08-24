@@ -26,8 +26,8 @@ export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
   const { locale, t } = useTranslations();
   const primaryLinks = [
-    { href: "/dashboard", label: t("nav.projects"), icon: FolderKanban },
-    { href: "/dashboard/tasks", label: t("nav.tasks"), icon: ListTodo },
+    { href: "/dashboard", label: t("nav.projects"), icon: FolderKanban, isActive: pathname === "/dashboard" || isActivePath(pathname, "/dashboard/projects") },
+    { href: "/dashboard/tasks", label: t("nav.tasks"), icon: ListTodo, isActive: isActivePath(pathname, "/dashboard/tasks") },
   ];
   const moreLinks = [
     { href: "/dashboard/activity", label: t("nav.activity"), icon: Zap },
@@ -54,9 +54,9 @@ export function MobileNavigation({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/90 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-3 items-end">
-        {primaryLinks.map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium ${isActivePath(pathname, href) ? "text-blue-600" : "text-muted-foreground"}`}>
-            <Icon className="size-[19px]" strokeWidth={isActivePath(pathname, href) ? 2.5 : 1.9} />
+        {primaryLinks.map(({ href, label, icon: Icon, isActive }) => (
+          <Link key={href} href={href} className={`flex min-h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium ${isActive ? "text-blue-600" : "text-muted-foreground"}`}>
+            <Icon className="size-[19px]" strokeWidth={isActive ? 2.5 : 1.9} />
             {label}
           </Link>
         ))}
