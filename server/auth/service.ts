@@ -49,9 +49,6 @@ export async function createSession(userId: string, { telegramMiniApp = false }:
 
   await prisma.$transaction(async (transaction) => {
     await transaction.session.deleteMany({ where: { expires: { lte: new Date() } } });
-    // A new login replaces a prior login for this user. There is no access,
-    // refresh, or rotating token alongside this one session token.
-    await transaction.session.deleteMany({ where: { userId } });
     await transaction.session.create({
       data: {
         userId,
