@@ -26,23 +26,23 @@ function toAuditExpense(expense: { type: string; title: string; amount: bigint; 
   return { type: expense.type, title: expense.title, amount: money(expense.amount), date: expense.date.toISOString(), description: expense.description, employeeName: expense.employeeName, vendorName: expense.vendorName, notes: expense.notes };
 }
 
-async function resolveEmployee(userId: string, employeeId: string) {
-  const employee = await prisma.employee.findFirst({
-    where: { id: employeeId, userId },
+async function resolveEmployee(employeeId: string) {
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
     select: { id: true, fullName: true },
   });
   if (!employee) throw new ValidationError([{ path: "employeeId", message: "Выберите работника из вашего списка." }]);
   return employee;
 }
 
-async function normalizeExpenseUpdate(userId: string, expense: NonNullable<Awaited<ReturnType<typeof findExpenseForUser>>>, input: UpdateExpenseInput) {
+async function normalizeExpenseUpdate(expense: NonNullable<Awaited<ReturnType<typeof findExpenseForUser>>>, input: UpdateExpenseInput) {
   const type = input.type ?? expense.type;
   const employeeId = input.employeeId === undefined ? expense.employeeId : input.employeeId;
 
   if (type === "EMPLOYEE" && !employeeId) {
     throw new ValidationError([{ path: "employeeId", message: "Выберите работника, получившего зарплату." }]);
   }
-  const employee = type === "EMPLOYEE" ? await resolveEmployee(userId, employeeId!) : null;
+  const employee = type === "EMPLOYEE" ? await resolveEmployee(employeeId!) : null;
 
   return {
     ...input,
@@ -74,7 +74,7 @@ export async function addProjectExpense(userId: string, projectId: string, input
       if (existing.projectId !== projectId) throw new ConflictError("Ключ операции уже использован для другого расхода.");
       return { expense: existing, projectTitle: project.title, duplicate: true };
     }
-    const employee = input.type === "EMPLOYEE" ? await resolveEmployee(userId, input.employeeId!) : null;
+    const employee = input.type === "EMPLOYEE" ? await resolveEmployee(input.employeeId!) : null;
     const expense = await createExpense(tx, projectId, input.type === "EMPLOYEE"
       ? { ...input, employeeId: employee!.id, employeeName: employee!.fullName, vendorName: null }
       : { ...input, employeeId: null, employeeName: null });
@@ -93,7 +93,7 @@ export async function updateProjectExpense(userId: string, expenseId: string, in
     const expense = await findExpenseForUser(tx, expenseId, userId);
     if (!expense) throw new NotFoundError("Расход");
     if (expense.project.status !== "ACTIVE") throw new ConflictError("Нельзя изменять расходы неактивного проекта.");
-    const updatedExpense = await updateExpense(tx, expenseId, await normalizeExpenseUpdate(userId, expense, input));
+    const updatedExpense = await updateExpense(tx, expenseId, await normalizeExpenseUpdate(expense, input));
     await changeProjectSpentAmount(tx, expense.projectId, updatedExpense.amount - expense.amount);
     await recordAudit(tx, { actorId: userId, projectId: expense.projectId, entityType: "EXPENSE", entityId: expense.id, action: "UPDATE", before: toAuditExpense(expense), after: toAuditExpense(updatedExpense) });
     return updatedExpense;

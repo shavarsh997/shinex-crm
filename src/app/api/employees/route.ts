@@ -1,12 +1,12 @@
-import { requireProjectEditor } from "@/server/auth";
+import { requireProjectEditor, requireUser } from "@/server/auth";
 import { createEmployeeSchema } from "@/server/modules/employees/employees.schema";
-import { createEmployeeForUser, getEmployeesForUser } from "@/server/modules/employees/employees.service";
+import { createEmployeeForUser, getAllEmployees } from "@/server/modules/employees/employees.service";
 import { withErrorHandling } from "@/server/shared/http";
 import { parseRequestBody } from "@/server/shared/validation";
 
 export const GET = withErrorHandling(async () => {
-  const user = await requireProjectEditor();
-  return Response.json({ employees: await getEmployeesForUser(user.id) });
+  await requireUser();
+  return Response.json({ employees: await getAllEmployees() });
 });
 
 export const POST = withErrorHandling(async (request) => {

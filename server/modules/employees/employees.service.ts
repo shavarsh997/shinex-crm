@@ -4,9 +4,8 @@ import { prisma } from "@/server/db/prisma";
 
 import type { CreateEmployeeInput } from "./employees.schema";
 
-export function getEmployeesForUser(userId: string) {
+export function getAllEmployees() {
   return prisma.employee.findMany({
-    where: { userId },
     select: { id: true, fullName: true, profession: true, phone: true },
     orderBy: { fullName: "asc" },
   });
@@ -21,14 +20,20 @@ export function createEmployeeForUser(userId: string, input: CreateEmployeeInput
 
 export async function getEmployeePayrollOverview(userId: string) {
   const employees = await prisma.employee.findMany({
-    where: { userId },
     select: {
       id: true,
       fullName: true,
       profession: true,
       phone: true,
       expenses: {
-        where: { type: "EMPLOYEE", deletedAt: null },
+        where: {
+          type: "EMPLOYEE",
+          deletedAt: null,
+          project: {
+            deletedAt: null,
+            OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+          },
+        },
         select: { id: true, title: true, amount: true, date: true, project: { select: { id: true, title: true } } },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       },

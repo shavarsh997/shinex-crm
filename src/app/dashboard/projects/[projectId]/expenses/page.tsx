@@ -5,7 +5,7 @@ import { ArrowLeft, ReceiptText } from "lucide-react";
 import { ExpenseList, type ExpenseView } from "@/components/expenses/expense-list";
 import { getAuthenticatedUser } from "@/server/auth";
 import { getProjectExpensePage } from "@/server/modules/expenses/expenses.service";
-import { getEmployeesForUser } from "@/server/modules/employees/employees.service";
+import { getAllEmployees } from "@/server/modules/employees/employees.service";
 import { getUserProjectSummary } from "@/server/modules/projects/projects.service";
 import { NotFoundError } from "@/server/shared/errors";
 import { getTranslations } from "@/i18n/server";
@@ -23,7 +23,7 @@ export default async function ProjectExpensesPage({ params }: { params: Promise<
     throw error;
   }
 
-  const [expensePage, employees] = await Promise.all([getProjectExpensePage(user.id, projectId, { limit: 10 }, undefined, "newest"), getEmployeesForUser(user.id)]);
+  const [expensePage, employees] = await Promise.all([getProjectExpensePage(user.id, projectId, { limit: 10 }, undefined, "newest"), getAllEmployees()]);
   const expenses: ExpenseView[] = expensePage.data.map((expense) => ({ id: expense.id, type: expense.type, title: expense.title, amount: expense.amount.toString(), date: expense.date.toISOString(), description: expense.description, employeeName: expense.employeeName, employeeId: expense.employeeId, vendorName: expense.vendorName, notes: expense.notes }));
   const money = `${new Intl.NumberFormat(localeToIntl(locale)).format(project.spentAmount)} AMD`;
 
