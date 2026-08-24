@@ -131,6 +131,15 @@
   }
 }
 
+/* iOS Safari zooms the page when a form control uses a font smaller than 16px. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* The dashboard's visual design includes Slate utility classes. Re-map these
    light-only colors to the semantic palette whenever dark mode is active. */
 @layer utilities {
