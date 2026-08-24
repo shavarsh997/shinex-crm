@@ -210,7 +210,10 @@
   }
 
   .dark .text-amber-600,
-  .dark .text-amber-700 {
+  .dark .text-amber-700,
+  .dark .text-amber-800,
+  .dark .text-amber-900,
+  .dark .text-amber-950 {
     color: oklch(0.83 0.12 80);
   }
 
