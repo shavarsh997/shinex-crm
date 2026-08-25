@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 type ProjectStatus = "ACTIVE" | "FROZEN" | "COMPLETED";
 type Screen = "settings" | "complete-warning" | "complete-code" | "delete-warning" | "delete-code";
@@ -40,7 +41,9 @@ export function ProjectSettingsDialog({ projectId, status, completedAt, frozenAt
   async function changeProjectState(action: "freeze" | "resume") {
     setPending(true); setError(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/${action}`, { method: "POST" });
+      const code = await requestConfirmationCode(action === "freeze" ? "project-freeze" : "project-resume", projectId, (phrase) => t("confirmation.prompt", { phrase }));
+      if (!code) return;
+      const response = await fetch(`/api/projects/${projectId}/${action}`, { method: "POST", headers: confirmationHeaders(code) });
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
       if (!response.ok) throw new Error(payload?.error?.message || t("project.stateUpdateFailed"));
       close(false); router.refresh();

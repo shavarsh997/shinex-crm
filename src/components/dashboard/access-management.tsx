@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/users/user-avatar";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -115,9 +116,11 @@ export function AccessManagement({ currentUserId, users }: {
     setError(null);
 
     try {
+      const code = await requestConfirmationCode("user-access-update", user.id, (phrase) => `Введите код подтверждения: ${phrase}`);
+      if (!code) return;
       const response = await fetch(`/api/admin/users/${user.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...confirmationHeaders(code) },
         body: JSON.stringify({
           role: user.role,
           approvalStatus,

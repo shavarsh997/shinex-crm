@@ -7,6 +7,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 import { ExpenseDialog } from "./expense-dialog";
 
 export type ExpenseView = { id: string; type: "EMPLOYEE" | "MATERIAL" | "FUEL" | "TRANSPORT" | "EQUIPMENT" | "SERVICE" | "OTHER"; title: string; amount: string; date: string; description: string | null; employeeName: string | null; employeeId: string | null; vendorName: string | null; notes: string | null };
@@ -61,7 +62,9 @@ export function ExpenseList({ projectId, initialExpenses, initialPageInfo, total
     if (!window.confirm(t("expense.deleteConfirm"))) return;
     setDeleting(expenseId);
     try {
-      const response = await fetch(`/api/expenses/${expenseId}`, { method: "DELETE" });
+      const code = await requestConfirmationCode("expense-delete", expenseId, (phrase) => t("confirmation.prompt", { phrase }));
+      if (!code) return;
+      const response = await fetch(`/api/expenses/${expenseId}`, { method: "DELETE", headers: confirmationHeaders(code) });
       if (!response.ok) throw new Error(t("expense.deleteFailed"));
       router.refresh();
     } catch (caughtError) {

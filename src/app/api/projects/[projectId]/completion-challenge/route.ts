@@ -23,7 +23,7 @@ export const GET = withErrorHandling(async (_request, context: ProjectRouteConte
   await requestProjectCompletion(user.id, user.role, projectId);
 
   const phrase = createPhrase();
-  (await cookies()).set(challengeCookieName(projectId), phrase, {
+  (await cookies()).set(challengeCookieName(projectId), JSON.stringify({ phrase, userId: user.id }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

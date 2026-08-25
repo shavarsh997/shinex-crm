@@ -18,12 +18,12 @@ function createPhrase() {
 }
 
 export const GET = withErrorHandling(async (_request, context: ProjectRouteContext) => {
-  await requireAdmin();
+  const administrator = await requireAdmin();
   const { projectId } = await context.params;
   await requestProjectHardDeletion(projectId);
 
   const phrase = createPhrase();
-  (await cookies()).set(challengeCookieName(projectId), phrase, {
+  (await cookies()).set(challengeCookieName(projectId), JSON.stringify({ phrase, userId: administrator.id }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

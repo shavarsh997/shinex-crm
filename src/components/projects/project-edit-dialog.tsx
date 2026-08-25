@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 type ProjectDetails = {
   id: string;
@@ -35,9 +36,11 @@ export function ProjectEditDialog({ project }: { project: ProjectDetails }) {
     setPending(true);
     setError(null);
     try {
+      const code = await requestConfirmationCode("project-update", project.id, (phrase) => t("confirmation.prompt", { phrase }));
+      if (!code) return;
       const response = await fetch(`/api/projects/${project.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...confirmationHeaders(code) },
         body: JSON.stringify(Object.fromEntries(data)),
       });
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;

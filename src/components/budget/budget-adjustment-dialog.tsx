@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 type AdjustmentType = "INCREASE" | "DECREASE";
 
@@ -29,7 +30,9 @@ export function BudgetAdjustmentDialog({ projectId }: { projectId: string }) {
     setPending(true);
     setError(null);
     try {
-      const response = await fetch(`/api/projects/${projectId}/budget-adjustments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...Object.fromEntries(data), clientRequestId }) });
+      const code = await requestConfirmationCode("budget-adjust", projectId, (phrase) => t("confirmation.prompt", { phrase }));
+      if (!code) return;
+      const response = await fetch(`/api/projects/${projectId}/budget-adjustments`, { method: "POST", headers: { "Content-Type": "application/json", ...confirmationHeaders(code) }, body: JSON.stringify({ ...Object.fromEntries(data), clientRequestId }) });
       const payload = await response.json().catch(() => null) as { error?: { message?: string; details?: { message?: string } } } | null;
       if (!response.ok) throw new Error(payload?.error?.details?.message ?? payload?.error?.message ?? t("budget.updateFailed"));
       setOpen(false);

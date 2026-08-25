@@ -23,9 +23,16 @@ export const POST = withErrorHandling(async (request, context: ProjectRouteConte
   const { projectId } = await context.params;
   const { phrase } = await parseRequestBody(request, confirmationSchema);
   const cookieStore = await cookies();
-  const expectedPhrase = cookieStore.get(challengeCookieName(projectId))?.value;
+  const cookieValue = cookieStore.get(challengeCookieName(projectId))?.value;
+  let challenge: { phrase?: string; userId?: string } | null = null;
 
-  if (!expectedPhrase || phrase !== expectedPhrase) {
+  try {
+    challenge = cookieValue ? JSON.parse(cookieValue) as { phrase?: string; userId?: string } : null;
+  } catch {
+    challenge = null;
+  }
+
+  if (!challenge?.phrase || phrase !== challenge.phrase || challenge.userId !== user.id) {
     throw new ValidationError([{ path: "phrase", message: "Код подтверждения не совпадает или уже истёк." }]);
   }
 

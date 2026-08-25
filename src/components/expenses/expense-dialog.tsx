@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 import type { EmployeeOption, ExpenseView } from "./expense-list";
 
 export function ExpenseDialog({ projectId, employees, expense, open, onOpenChange, compact = false }: { projectId: string; employees: EmployeeOption[]; expense?: ExpenseView; open?: boolean; onOpenChange?: (open: boolean) => void; compact?: boolean }) {
@@ -35,8 +36,12 @@ export function ExpenseDialog({ projectId, employees, expense, open, onOpenChang
     setError(null);
     setPending(true);
     try {
+      const code = expense
+        ? await requestConfirmationCode("expense-update", expense.id, (phrase) => t("confirmation.prompt", { phrase }))
+        : null;
+      if (expense && !code) return;
       const url = expense ? `/api/expenses/${expense.id}` : `/api/projects/${projectId}/expenses`;
-      const response = await fetch(url, { method: expense ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(data)) });
+      const response = await fetch(url, { method: expense ? "PATCH" : "POST", headers: { "Content-Type": "application/json", ...(code ? confirmationHeaders(code) : {}) }, body: JSON.stringify(Object.fromEntries(data)) });
       const payload = await response.json().catch(() => null) as { error?: { message: string } } | null;
       if (!response.ok) throw new Error(payload?.error?.message || t("expense.saveFailed"));
       changeOpen(false);

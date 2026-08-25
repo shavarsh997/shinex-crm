@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
+import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 export type PaymentView = {
   id: string;
@@ -44,11 +45,15 @@ export function PaymentDialog({ projectId, payment, compact = false }: {
     setError(null);
 
     try {
+      const code = payment
+        ? await requestConfirmationCode("payment-update", payment.id, (phrase) => t("confirmation.prompt", { phrase }))
+        : null;
+      if (payment && !code) return;
       const response = await fetch(
         payment ? `/api/payments/${payment.id}` : `/api/projects/${projectId}/payments`,
         {
           method: payment ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(code ? confirmationHeaders(code) : {}) },
           body: JSON.stringify(Object.fromEntries(data)),
         },
       );
@@ -70,7 +75,9 @@ export function PaymentDialog({ projectId, payment, compact = false }: {
     setDeleting(true);
     setError(null);
     try {
-      const response = await fetch(`/api/payments/${payment.id}`, { method: "DELETE" });
+      const code = await requestConfirmationCode("payment-delete", payment.id, (phrase) => t("confirmation.prompt", { phrase }));
+      if (!code) return;
+      const response = await fetch(`/api/payments/${payment.id}`, { method: "DELETE", headers: confirmationHeaders(code) });
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
       if (!response.ok) throw new Error(payload?.error?.message ?? t("payment.deleteFailed"));
 
