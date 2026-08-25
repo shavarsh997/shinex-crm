@@ -84,7 +84,7 @@ export function PaymentDialog({ projectId, payment, compact = false }: {
   }
 
   return <Dialog open={open} onOpenChange={changeOpen}>
-    <DialogTrigger render={<Button aria-label={isEditing ? t("payment.edit") : t("payment.add")} size={compact ? "icon" : "lg"} variant={isEditing ? "ghost" : "default"} className={isEditing ? "size-9 rounded-xl text-slate-500 hover:text-slate-950" : compact ? "size-12 rounded-2xl bg-emerald-600 text-white" : "h-12 rounded-2xl bg-emerald-600 px-4 text-white hover:bg-emerald-700"} />}>
+    <DialogTrigger render={<Button aria-label={isEditing ? t("payment.edit") : t("payment.add")} size={compact ? "icon" : "lg"} variant={isEditing ? "ghost" : "default"} className={isEditing ? "size-9 rounded-xl text-slate-500 hover:text-slate-950" : compact ? "size-12 rounded-2xl bg-emerald-600 text-white" : "h-12 w-full justify-center rounded-2xl bg-emerald-600 px-4 text-white hover:bg-emerald-700 sm:w-auto"} />}>
       {isEditing ? <Pencil className="size-4" /> : <><CircleDollarSign className="size-4" />{!compact && t("payment.add")}</>}
     </DialogTrigger>
     <ResponsiveDialogContent className="p-5 pb-8 sm:p-7">

@@ -1,6 +1,9 @@
+"use client";
+
 import { ComponentPropsWithoutRef } from "react";
 
 import { getUserAvatarGradient, getUserInitials } from "@/lib/user-avatar";
+import { useTranslations } from "@/i18n/provider";
 
 type UserAvatarProps = ComponentPropsWithoutRef<"span"> & {
   userId: string;
@@ -9,7 +12,8 @@ type UserAvatarProps = ComponentPropsWithoutRef<"span"> & {
 };
 
 export function UserAvatar({ userId, name, email, className, ...props }: UserAvatarProps) {
-  const label = name || email || "Пользователь";
+  const { t } = useTranslations();
+  const label = name || email || t("common.unnamedUser");
 
   return (
     <span
