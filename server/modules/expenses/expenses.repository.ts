@@ -5,17 +5,14 @@ import type { Prisma } from "@/server/generated/prisma/client";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
-export function findExpenseForUser(db: DbClient, expenseId: string, userId: string) {
+export function findExpenseForUser(db: DbClient, expenseId: string, userId: string, isAdmin = false) {
   return db.expense.findFirst({
     where: {
       id: expenseId,
       deletedAt: null,
       project: {
         deletedAt: null,
-        OR: [
-          { userId },
-          { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
-        ],
+        ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] }),
       },
     },
     select: {
@@ -26,14 +23,14 @@ export function findExpenseForUser(db: DbClient, expenseId: string, userId: stri
   });
 }
 
-export function findDeletedExpenseForUser(db: DbClient, expenseId: string, userId: string) {
+export function findDeletedExpenseForUser(db: DbClient, expenseId: string, userId: string, isAdmin = false) {
   return db.expense.findFirst({
     where: {
       id: expenseId,
       deletedAt: { not: null },
       project: {
         deletedAt: null,
-        OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }],
+        ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] }),
       },
     },
     select: {

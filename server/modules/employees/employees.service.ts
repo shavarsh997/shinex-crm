@@ -18,7 +18,7 @@ export function createEmployeeForUser(userId: string, input: CreateEmployeeInput
   });
 }
 
-export async function getEmployeePayrollOverview(userId: string) {
+export async function getEmployeePayrollOverview(userId: string, isAdmin = false) {
   const employees = await prisma.employee.findMany({
     select: {
       id: true,
@@ -31,7 +31,7 @@ export async function getEmployeePayrollOverview(userId: string) {
           deletedAt: null,
           project: {
             deletedAt: null,
-            OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+            ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }] }),
           },
         },
         select: { id: true, title: true, amount: true, date: true, project: { select: { id: true, title: true } } },

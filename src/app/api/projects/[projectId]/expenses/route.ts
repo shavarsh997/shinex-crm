@@ -19,7 +19,7 @@ export const GET = withErrorHandling(async (request, context: ProjectExpenseRout
   const user = await requireUser();
   const { projectId } = await context.params;
   const { type, sort, ...pagination } = await parseSearchParams(request, expensePageSchema);
-  const page = await getProjectExpensePage(user.id, projectId, pagination, type, sort);
+  const page = await getProjectExpensePage(user.id, projectId, pagination, type, sort, user.role === "ADMIN");
 
   return Response.json({
     expenses: page.data.map(serializeExpense),
@@ -32,7 +32,7 @@ export const POST = withErrorHandling(async (request, context: ProjectExpenseRou
   const user = await requireUser();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, createExpenseSchema);
-  const expense = await addProjectExpense(user.id, projectId, input);
+  const expense = await addProjectExpense(user.id, projectId, input, user.role === "ADMIN");
 
   return Response.json({ expense: serializeExpense(expense) }, { status: 201 });
 });

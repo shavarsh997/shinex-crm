@@ -13,7 +13,7 @@ const taskPageSchema = cursorPaginationSchema.extend({
 export const GET = withErrorHandling(async (request) => {
   const user = await requireUser();
   const { tab, ...pagination } = await parseSearchParams(request, taskPageSchema);
-  const page = await getUserTaskPage(user.id, tab, pagination);
+  const page = await getUserTaskPage(user.id, tab, pagination, user.role === "ADMIN");
 
   return Response.json({ tasks: page.data, pageInfo: page.pageInfo });
 });
@@ -21,7 +21,7 @@ export const GET = withErrorHandling(async (request) => {
 export const POST = withErrorHandling(async (request) => {
   const user = await requireUser();
   const input = await parseRequestBody(request, createTaskSchema);
-  const task = await createTaskForUser(user.id, input);
+  const task = await createTaskForUser(user.id, input, user.role === "ADMIN");
 
   return Response.json({ task }, { status: 201 });
 });

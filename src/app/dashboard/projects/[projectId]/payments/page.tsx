@@ -15,7 +15,7 @@ export default async function ProjectPaymentsPage({ params }: { params: Promise<
   const { projectId } = await params;
   let project;
   try {
-    project = await getUserProject(user.id, projectId);
+    project = await getUserProject(user.id, user.role, projectId);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;

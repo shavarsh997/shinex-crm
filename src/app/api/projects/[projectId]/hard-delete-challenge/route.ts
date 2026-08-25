@@ -1,8 +1,8 @@
 import { randomInt } from "node:crypto";
 import { cookies } from "next/headers";
 
-import { requireUser } from "@/server/auth";
-import { requestProjectCompletion } from "@/server/modules/projects/projects.service";
+import { requireAdmin } from "@/server/auth";
+import { requestProjectHardDeletion } from "@/server/modules/projects/projects.service";
 import { withErrorHandling } from "@/server/shared/http";
 
 type ProjectRouteContext = { params: Promise<{ projectId: string }> };
@@ -10,7 +10,7 @@ type ProjectRouteContext = { params: Promise<{ projectId: string }> };
 const words = ["МАЯК", "ОРБИТА", "КЕДР", "ВЕТЕР", "ГРАНИТ", "ПУЛЬС", "СЕВЕР", "КОМЕТА"];
 
 function challengeCookieName(projectId: string) {
-  return `shinex_project_completion_${projectId}`;
+  return `shinex_project_hard_delete_${projectId}`;
 }
 
 function createPhrase() {
@@ -18,9 +18,9 @@ function createPhrase() {
 }
 
 export const GET = withErrorHandling(async (_request, context: ProjectRouteContext) => {
-  const user = await requireUser();
+  await requireAdmin();
   const { projectId } = await context.params;
-  await requestProjectCompletion(user.id, user.role, projectId);
+  await requestProjectHardDeletion(projectId);
 
   const phrase = createPhrase();
   (await cookies()).set(challengeCookieName(projectId), phrase, {

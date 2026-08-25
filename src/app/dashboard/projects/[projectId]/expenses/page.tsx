@@ -17,13 +17,13 @@ export default async function ProjectExpensesPage({ params }: { params: Promise<
   const { projectId } = await params;
   let project;
   try {
-    project = await getUserProjectSummary(user.id, projectId);
+    project = await getUserProjectSummary(user.id, user.role, projectId);
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
 
-  const [expensePage, employees] = await Promise.all([getProjectExpensePage(user.id, projectId, { limit: 10 }, undefined, "newest"), getAllEmployees()]);
+  const [expensePage, employees] = await Promise.all([getProjectExpensePage(user.id, projectId, { limit: 10 }, undefined, "newest", user.role === "ADMIN"), getAllEmployees()]);
   const expenses: ExpenseView[] = expensePage.data.map((expense) => ({ id: expense.id, type: expense.type, title: expense.title, amount: expense.amount.toString(), date: expense.date.toISOString(), description: expense.description, employeeName: expense.employeeName, employeeId: expense.employeeId, vendorName: expense.vendorName, notes: expense.notes }));
   const money = `${new Intl.NumberFormat(localeToIntl(locale)).format(project.spentAmount)} AMD`;
 

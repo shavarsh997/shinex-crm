@@ -12,18 +12,18 @@ import {
 import { findProjectForEditor } from "../projects/projects.repository";
 import type { CreateTaskInput, UpdateTaskInput } from "./tasks.schema";
 
-const visibleToUser = (userId: string): Prisma.TaskWhereInput => ({
+const visibleToUser = (userId: string, isAdmin = false): Prisma.TaskWhereInput => ({
   AND: [{ deletedAt: null }, { OR: [
     { createdById: userId, projectId: null },
     {
       project: {
-        is: { deletedAt: null, OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }] },
+        is: { deletedAt: null, ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }] }) },
       },
     },
   ] }],
 });
 
-const editableByUser = (userId: string): Prisma.TaskWhereInput => ({
+const editableByUser = (userId: string, isAdmin = false): Prisma.TaskWhereInput => ({
   AND: [{ deletedAt: null }, { OR: [
     { createdById: userId, projectId: null },
     {
@@ -31,10 +31,7 @@ const editableByUser = (userId: string): Prisma.TaskWhereInput => ({
         is: {
           status: "ACTIVE",
           deletedAt: null,
-          OR: [
-            { userId },
-            { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
-          ],
+          ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] }),
         },
       },
     },
@@ -56,9 +53,10 @@ export async function getUserTaskPage(
   userId: string,
   tab: TaskListTab,
   pagination: CursorPaginationInput,
+  isAdmin = false,
 ) {
   const tasks = await prisma.task.findMany({
-    where: { AND: [visibleToUser(userId), taskTabFilter(tab)] },
+    where: { AND: [visibleToUser(userId, isAdmin), taskTabFilter(tab)] },
     include: taskInclude,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     ...toPrismaCursorPagination(pagination),
@@ -67,41 +65,38 @@ export async function getUserTaskPage(
   return createCursorPage(tasks, pagination.limit);
 }
 
-export async function getUserTaskCounts(userId: string) {
+export async function getUserTaskCounts(userId: string, isAdmin = false) {
   const [active, archive] = await Promise.all([
-    prisma.task.count({ where: { AND: [visibleToUser(userId), taskTabFilter("active")] } }),
-    prisma.task.count({ where: { AND: [visibleToUser(userId), taskTabFilter("archive")] } }),
+    prisma.task.count({ where: { AND: [visibleToUser(userId, isAdmin), taskTabFilter("active")] } }),
+    prisma.task.count({ where: { AND: [visibleToUser(userId, isAdmin), taskTabFilter("archive")] } }),
   ]);
 
   return { active, archive };
 }
 
-export function getActiveTaskCount(userId: string) {
+export function getActiveTaskCount(userId: string, role: string) {
   return prisma.task.count({
     where: {
-      AND: [visibleToUser(userId), { status: { not: "DONE" } }],
+      AND: [visibleToUser(userId, role === "ADMIN"), { status: { not: "DONE" } }],
     },
   });
 }
 
-export function getEditableProjectsForTasks(userId: string) {
+export function getEditableProjectsForTasks(userId: string, isAdmin = false) {
   return prisma.project.findMany({
     where: {
       status: "ACTIVE",
       deletedAt: null,
-      OR: [
-        { userId },
-        { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
-      ],
+      ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] }),
     },
     select: { id: true, title: true },
     orderBy: { title: "asc" },
   });
 }
 
-export async function createTaskForUser(userId: string, input: CreateTaskInput) {
+export async function createTaskForUser(userId: string, input: CreateTaskInput, isAdmin = false) {
   if (input.projectId) {
-    const project = await findProjectForEditor(prisma, input.projectId, userId);
+    const project = await findProjectForEditor(prisma, input.projectId, userId, isAdmin);
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Нельзя добавлять задачи в неактивный проект.");
   }
@@ -112,15 +107,15 @@ export async function createTaskForUser(userId: string, input: CreateTaskInput) 
   });
 }
 
-export async function updateTaskForUser(userId: string, taskId: string, input: UpdateTaskInput) {
+export async function updateTaskForUser(userId: string, taskId: string, input: UpdateTaskInput, isAdmin = false) {
   const task = await prisma.task.findFirst({
-    where: { id: taskId, ...editableByUser(userId) },
+    where: { id: taskId, ...editableByUser(userId, isAdmin) },
     select: { id: true },
   });
   if (!task) throw new NotFoundError("Задача");
 
   if (input.projectId) {
-    const project = await findProjectForEditor(prisma, input.projectId, userId);
+    const project = await findProjectForEditor(prisma, input.projectId, userId, isAdmin);
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Нельзя привязывать задачу к неактивному проекту.");
   }
@@ -135,9 +130,9 @@ export async function updateTaskForUser(userId: string, taskId: string, input: U
   });
 }
 
-export async function deleteTaskForUser(userId: string, taskId: string) {
+export async function deleteTaskForUser(userId: string, taskId: string, isAdmin = false) {
   const task = await prisma.task.findFirst({
-    where: { id: taskId, ...editableByUser(userId) },
+    where: { id: taskId, ...editableByUser(userId, isAdmin) },
     select: { id: true },
   });
   if (!task) throw new NotFoundError("Задача");

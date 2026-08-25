@@ -11,7 +11,7 @@ export const PATCH = withErrorHandling(async (request, context: ExpenseRouteCont
   const user = await requireUser();
   const { expenseId } = await context.params;
   const input = await parseRequestBody(request, updateExpenseSchema);
-  const expense = await updateProjectExpense(user.id, expenseId, input);
+  const expense = await updateProjectExpense(user.id, expenseId, input, user.role === "ADMIN");
 
   return Response.json({ expense: serializeExpense(expense) });
 });
@@ -19,7 +19,7 @@ export const PATCH = withErrorHandling(async (request, context: ExpenseRouteCont
 export const DELETE = withErrorHandling(async (_request, context: ExpenseRouteContext) => {
   const user = await requireUser();
   const { expenseId } = await context.params;
-  await deleteProjectExpense(user.id, expenseId);
+  await deleteProjectExpense(user.id, expenseId, user.role === "ADMIN");
 
   return new Response(null, { status: 204 });
 });

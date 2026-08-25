@@ -10,7 +10,7 @@ type ProjectRouteContext = { params: Promise<{ projectId: string }> };
 export const GET = withErrorHandling(async (_request, context: ProjectRouteContext) => {
   const user = await requireUser();
   const { projectId } = await context.params;
-  const project = await getUserProject(user.id, projectId);
+  const project = await getUserProject(user.id, user.role, projectId);
 
   return Response.json({
     project: serializeProject(project),
@@ -22,7 +22,7 @@ export const PATCH = withErrorHandling(async (request, context: ProjectRouteCont
   const user = await requireUser();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, updateProjectSchema);
-  const project = await updateProjectForUser(user.id, projectId, input);
+  const project = await updateProjectForUser(user.id, user.role, projectId, input);
 
   return Response.json({ project: serializeProject(project) });
 });

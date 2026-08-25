@@ -9,9 +9,9 @@ export default async function TasksPage() {
   const { t } = await getTranslations();
   const user = await getAuthenticatedUser();
   const [activeTasks, taskCounts, projects] = await Promise.all([
-    getUserTaskPage(user.id, "active", { limit: 10 }),
-    getUserTaskCounts(user.id),
-    getEditableProjectsForTasks(user.id),
+    getUserTaskPage(user.id, "active", { limit: 10 }, user.role === "ADMIN"),
+    getUserTaskCounts(user.id, user.role === "ADMIN"),
+    getEditableProjectsForTasks(user.id, user.role === "ADMIN"),
   ]);
   const taskViews = activeTasks.data.map((task) => ({ id: task.id, title: task.title, description: task.description, status: task.status, project: task.project }));
 

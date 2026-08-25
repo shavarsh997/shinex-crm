@@ -7,7 +7,7 @@ import { parseRequestBody } from "@/server/shared/validation";
 
 export const GET = withErrorHandling(async () => {
   const user = await requireUser();
-  const projects = await getUserProjects(user.id);
+  const projects = await getUserProjects(user.id, user.role);
 
   return Response.json({ projects: projects.map(serializeProject) });
 });

@@ -5,6 +5,19 @@ import type { Prisma, ProjectStatus } from "@/server/generated/prisma/client";
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
+function projectViewerWhere(userId: string, isAdmin: boolean): Prisma.ProjectWhereInput {
+  return isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }] };
+}
+
+function projectEditorWhere(userId: string, isAdmin: boolean): Prisma.ProjectWhereInput {
+  return isAdmin ? {} : {
+    OR: [
+      { userId },
+      { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
+    ],
+  };
+}
+
 const projectSummaryInclude = {
   user: {
     select: { id: true, name: true, email: true },
@@ -20,23 +33,23 @@ const projectSummaryInclude = {
   },
 } as const;
 
-export function findProjectsByUserId(userId: string, status?: ProjectStatus) {
+export function findProjectsByUserId(userId: string, status?: ProjectStatus, isAdmin = false) {
   return prisma.project.findMany({
     where: {
       deletedAt: null,
-      OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+      ...projectViewerWhere(userId, isAdmin),
       ...(status ? { status } : {}),
     },
     orderBy: { updatedAt: "desc" },
   });
 }
 
-export function findProjectByIdForUser(projectId: string, userId: string) {
+export function findProjectByIdForUser(projectId: string, userId: string, isAdmin = false) {
   return prisma.project.findFirst({
     where: {
       id: projectId,
       deletedAt: null,
-      OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+      ...projectViewerWhere(userId, isAdmin),
     },
     include: {
       user: {
@@ -66,36 +79,33 @@ export function findProjectByIdForUser(projectId: string, userId: string) {
   });
 }
 
-export function findProjectSummaryByIdForUser(projectId: string, userId: string) {
+export function findProjectSummaryByIdForUser(projectId: string, userId: string, isAdmin = false) {
   return prisma.project.findFirst({
     where: {
       id: projectId,
       deletedAt: null,
-      OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+      ...projectViewerWhere(userId, isAdmin),
     },
     include: projectSummaryInclude,
   });
 }
 
-export function findProjectForUser(db: DbClient, projectId: string, userId: string) {
+export function findProjectForUser(db: DbClient, projectId: string, userId: string, isAdmin = false) {
   return db.project.findFirst({
     where: {
       id: projectId,
       deletedAt: null,
-      OR: [{ userId }, { members: { some: { userId, deletedAt: null } } }],
+      ...projectViewerWhere(userId, isAdmin),
     },
   });
 }
 
-export function findProjectForEditor(db: DbClient, projectId: string, userId: string) {
+export function findProjectForEditor(db: DbClient, projectId: string, userId: string, isAdmin = false) {
   return db.project.findFirst({
     where: {
       id: projectId,
       deletedAt: null,
-      OR: [
-        { userId },
-        { members: { some: { userId, role: "EDITOR", deletedAt: null } } },
-      ],
+      ...projectEditorWhere(userId, isAdmin),
     },
   });
 }

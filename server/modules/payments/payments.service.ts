@@ -14,11 +14,11 @@ const paymentSelect = {
   project: { select: { status: true } },
 } as const;
 
-function paymentWhere(paymentId: string, userId: string, deleted: "active" | "deleted"): Prisma.PaymentWhereInput {
+function paymentWhere(paymentId: string, userId: string, deleted: "active" | "deleted", isAdmin: boolean): Prisma.PaymentWhereInput {
   return {
     id: paymentId,
     deletedAt: deleted === "active" ? null : { not: null },
-    project: { deletedAt: null, OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] },
+    project: { deletedAt: null, ...(isAdmin ? {} : { OR: [{ userId }, { members: { some: { userId, role: "EDITOR", deletedAt: null } } }] }) },
   };
 }
 
@@ -26,9 +26,9 @@ function toAuditPayment(payment: { amount: bigint; date: Date; notes: string | n
   return { amount: money(payment.amount), date: payment.date.toISOString(), notes: payment.notes };
 }
 
-export async function addProjectPayment(userId: string, projectId: string, input: CreatePaymentInput) {
+export async function addProjectPayment(userId: string, projectId: string, input: CreatePaymentInput, isAdmin = false) {
   return inProjectTransaction(projectId, async (transaction) => {
-    const project = await findProjectForEditor(transaction, projectId, userId);
+    const project = await findProjectForEditor(transaction, projectId, userId, isAdmin);
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Нельзя добавлять поступления в неактивный проект.");
     const existing = await transaction.payment.findUnique({ where: { clientRequestId: input.clientRequestId } });
@@ -43,11 +43,11 @@ export async function addProjectPayment(userId: string, projectId: string, input
   });
 }
 
-export async function updateProjectPayment(userId: string, paymentId: string, input: UpdatePaymentInput) {
-  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "active"), select: paymentSelect });
+export async function updateProjectPayment(userId: string, paymentId: string, input: UpdatePaymentInput, isAdmin = false) {
+  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "active", isAdmin), select: paymentSelect });
   if (!initial) throw new NotFoundError("Поступление");
   return inProjectTransaction(initial.projectId, async (transaction) => {
-    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "active"), select: paymentSelect });
+    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "active", isAdmin), select: paymentSelect });
     if (!payment) throw new NotFoundError("Поступление");
     if (payment.project.status !== "ACTIVE") throw new ConflictError("Нельзя изменять поступления неактивного проекта.");
     const updatedPayment = await transaction.payment.update({ where: { id: paymentId }, data: input });
@@ -57,11 +57,11 @@ export async function updateProjectPayment(userId: string, paymentId: string, in
   });
 }
 
-export async function deleteProjectPayment(userId: string, paymentId: string) {
-  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "active"), select: paymentSelect });
+export async function deleteProjectPayment(userId: string, paymentId: string, isAdmin = false) {
+  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "active", isAdmin), select: paymentSelect });
   if (!initial) throw new NotFoundError("Поступление");
   return inProjectTransaction(initial.projectId, async (transaction) => {
-    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "active"), select: paymentSelect });
+    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "active", isAdmin), select: paymentSelect });
     if (!payment) throw new NotFoundError("Поступление");
     if (payment.project.status !== "ACTIVE") throw new ConflictError("Нельзя удалять поступления неактивного проекта.");
     await transaction.payment.update({ where: { id: paymentId }, data: { deletedAt: new Date() } });
@@ -70,11 +70,11 @@ export async function deleteProjectPayment(userId: string, paymentId: string) {
   });
 }
 
-export async function restoreProjectPayment(userId: string, paymentId: string) {
-  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "deleted"), select: paymentSelect });
+export async function restoreProjectPayment(userId: string, paymentId: string, isAdmin = false) {
+  const initial = await prisma.payment.findFirst({ where: paymentWhere(paymentId, userId, "deleted", isAdmin), select: paymentSelect });
   if (!initial) throw new NotFoundError("Удалённое поступление");
   return inProjectTransaction(initial.projectId, async (transaction) => {
-    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "deleted"), select: paymentSelect });
+    const payment = await transaction.payment.findFirst({ where: paymentWhere(paymentId, userId, "deleted", isAdmin), select: paymentSelect });
     if (!payment) throw new NotFoundError("Удалённое поступление");
     if (payment.project.status !== "ACTIVE") throw new ConflictError("Восстановить поступление можно только в активном проекте.");
     const restored = await transaction.payment.update({ where: { id: paymentId }, data: { deletedAt: null } });

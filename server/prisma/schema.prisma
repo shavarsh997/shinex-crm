@@ -171,8 +171,9 @@ model BudgetAdjustment {
   @@index([projectId, date])
 }
 
-// Append-only operational evidence. It intentionally has no foreign keys so
-// future cleanup cannot erase the history required to reconstruct an action.
+// Audit records have no foreign keys so normal cleanup cannot delete them.
+// The administrator-only hard project deletion explicitly removes entries for
+// that project in the same transaction.
 model AuditLog {
   id         String   @id @default(cuid())
   actorId    String

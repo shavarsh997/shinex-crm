@@ -8,6 +8,6 @@ type PaymentRouteContext = { params: Promise<{ paymentId: string }> };
 export const POST = withErrorHandling(async (_request, context: PaymentRouteContext) => {
   const user = await requireUser();
   const { paymentId } = await context.params;
-  const payment = await restoreProjectPayment(user.id, paymentId);
+  const payment = await restoreProjectPayment(user.id, paymentId, user.role === "ADMIN");
   return Response.json({ payment: serializePayment(payment) });
 });

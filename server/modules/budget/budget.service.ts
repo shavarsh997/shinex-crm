@@ -9,8 +9,8 @@ import { createCursorPage, toPrismaCursorPagination, type CursorPaginationInput 
 import { findProjectForEditor, findProjectForUser } from "../projects/projects.repository";
 import type { CreateBudgetAdjustmentInput } from "./budget.schema";
 
-export async function getProjectBudgetAdjustmentPage(userId: string, projectId: string, pagination: CursorPaginationInput) {
-  const project = await findProjectForUser(prisma, projectId, userId);
+export async function getProjectBudgetAdjustmentPage(userId: string, projectId: string, pagination: CursorPaginationInput, isAdmin = false) {
+  const project = await findProjectForUser(prisma, projectId, userId, isAdmin);
   if (!project) throw new NotFoundError("Проект");
   const where = { projectId };
   const [adjustments, totalCount] = await Promise.all([
@@ -20,9 +20,9 @@ export async function getProjectBudgetAdjustmentPage(userId: string, projectId: 
   return { ...createCursorPage(adjustments, pagination.limit), totalCount };
 }
 
-export async function addBudgetAdjustment(userId: string, projectId: string, input: CreateBudgetAdjustmentInput) {
+export async function addBudgetAdjustment(userId: string, projectId: string, input: CreateBudgetAdjustmentInput, isAdmin = false) {
   return inProjectTransaction(projectId, async (transaction) => {
-    const project = await findProjectForEditor(transaction, projectId, userId);
+    const project = await findProjectForEditor(transaction, projectId, userId, isAdmin);
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Нельзя менять бюджет неактивного проекта.");
     const existing = await transaction.budgetAdjustment.findUnique({ where: { clientRequestId: input.clientRequestId } });

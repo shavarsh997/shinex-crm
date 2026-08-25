@@ -6,7 +6,7 @@ import { getEmployeePayrollOverview } from "@/server/modules/employees/employees
 
 export default async function EmployeesPage() {
   const user = await getAuthenticatedUser();
-  const employees = await getEmployeePayrollOverview(user.id);
+  const employees = await getEmployeePayrollOverview(user.id, user.role === "ADMIN");
   const view = employees.map((employee) => ({
     ...employee,
     totalPaid: employee.totalPaid.toString(),

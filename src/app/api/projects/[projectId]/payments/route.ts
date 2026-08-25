@@ -11,7 +11,7 @@ export const POST = withErrorHandling(async (request, context: ProjectPaymentRou
   const user = await requireUser();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, createPaymentSchema);
-  const payment = await addProjectPayment(user.id, projectId, input);
+  const payment = await addProjectPayment(user.id, projectId, input, user.role === "ADMIN");
 
   return Response.json({ payment: serializePayment(payment) }, { status: 201 });
 });

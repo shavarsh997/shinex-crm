@@ -10,7 +10,7 @@ export const POST = withErrorHandling(async (request, context: ProjectMemberRout
   const user = await requireUser();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, addProjectMemberSchema);
-  const member = await addProjectMember(user.id, projectId, input);
+  const member = await addProjectMember(user.id, projectId, input, user.role === "ADMIN");
 
   return Response.json({ member }, { status: 201 });
 });

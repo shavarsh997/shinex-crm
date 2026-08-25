@@ -17,12 +17,28 @@ import {
   updateProject,
 } from "./projects.repository";
 
-export function getUserProjects(userId: string, status?: ProjectStatus) {
-  return findProjectsByUserId(userId, status);
+function isAdministrator(role: string) {
+  return role === "ADMIN";
 }
 
-export async function getUserProject(userId: string, projectId: string) {
-  const project = await findProjectByIdForUser(projectId, userId);
+function findProjectForOwnerOrAdmin(
+  db: typeof prisma | Prisma.TransactionClient,
+  projectId: string,
+  userId: string,
+  isAdmin: boolean,
+) {
+  return db.project.findFirst({
+    where: { id: projectId, deletedAt: null, ...(isAdmin ? {} : { userId }) },
+  });
+}
+
+export function getUserProjects(userId: string, role: string, status?: ProjectStatus) {
+  return findProjectsByUserId(userId, status, isAdministrator(role));
+}
+
+export async function getUserProject(userId: string, role: string, projectId: string) {
+  const isAdmin = isAdministrator(role);
+  const project = await findProjectByIdForUser(projectId, userId, isAdmin);
 
   if (!project) {
     throw new NotFoundError("Проект");
@@ -32,13 +48,14 @@ export async function getUserProject(userId: string, projectId: string) {
 
   return {
     ...project,
-    canEdit: project.userId === userId || membership?.role === "EDITOR",
-    canManageMembers: project.userId === userId,
+    canEdit: isAdmin || project.userId === userId || membership?.role === "EDITOR",
+    canManageMembers: isAdmin || project.userId === userId,
   };
 }
 
-export async function getUserProjectSummary(userId: string, projectId: string) {
-  const project = await findProjectSummaryByIdForUser(projectId, userId);
+export async function getUserProjectSummary(userId: string, role: string, projectId: string) {
+  const isAdmin = isAdministrator(role);
+  const project = await findProjectSummaryByIdForUser(projectId, userId, isAdmin);
 
   if (!project) {
     throw new NotFoundError("Проект");
@@ -48,8 +65,8 @@ export async function getUserProjectSummary(userId: string, projectId: string) {
 
   return {
     ...project,
-    canEdit: project.userId === userId || membership?.role === "EDITOR",
-    canManageMembers: project.userId === userId,
+    canEdit: isAdmin || project.userId === userId || membership?.role === "EDITOR",
+    canManageMembers: isAdmin || project.userId === userId,
   };
 }
 
@@ -109,11 +126,12 @@ export async function createProjectForUser(userId: string, input: CreateProjectI
 
 export async function updateProjectForUser(
   userId: string,
+  role: string,
   projectId: string,
   input: UpdateProjectInput,
 ) {
   return inProjectTransaction(projectId, async (transaction) => {
-    const project = await findProjectForEditor(transaction, projectId, userId);
+    const project = await findProjectForEditor(transaction, projectId, userId, isAdministrator(role));
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Неактивный проект нельзя изменять.");
     const updated = await updateProject(transaction, projectId, input);
@@ -126,8 +144,8 @@ export async function updateProjectForUser(
   });
 }
 
-export async function requestProjectCompletion(userId: string, projectId: string) {
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId, deletedAt: null } });
+export async function requestProjectCompletion(userId: string, role: string, projectId: string) {
+  const project = await findProjectForOwnerOrAdmin(prisma, projectId, userId, isAdministrator(role));
 
   if (!project) {
     throw new NotFoundError("Проект");
@@ -142,43 +160,73 @@ export async function requestProjectCompletion(userId: string, projectId: string
   }
 }
 
-export async function completeProjectForUser(userId: string, projectId: string) {
-  await requestProjectCompletion(userId, projectId);
+export async function completeProjectForUser(userId: string, role: string, projectId: string) {
+  await requestProjectCompletion(userId, role, projectId);
 
-  const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "ACTIVE", deletedAt: null },
-    data: { status: "COMPLETED", completedAt: new Date() },
+  const project = await inProjectTransaction(projectId, async (transaction) => {
+    const current = await findProjectForOwnerOrAdmin(transaction, projectId, userId, isAdministrator(role));
+    if (!current || current.status !== "ACTIVE") throw new ConflictError("Этот проект уже завершён.");
+    return transaction.project.update({ where: { id: projectId }, data: { status: "COMPLETED", completedAt: new Date() } });
   });
 
-  if (result.count === 0) {
-    throw new ConflictError("Этот проект уже завершён.");
-  }
-
-  return prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+  return project;
 }
 
-export async function freezeProjectForUser(userId: string, projectId: string) {
-  const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "ACTIVE", deletedAt: null },
-    data: { status: "FROZEN", frozenAt: new Date() },
+export async function freezeProjectForUser(userId: string, role: string, projectId: string) {
+  return inProjectTransaction(projectId, async (transaction) => {
+    const project = await findProjectForOwnerOrAdmin(transaction, projectId, userId, isAdministrator(role));
+    if (!project || project.status !== "ACTIVE") throw new ConflictError("Заморозить можно только активный проект.");
+    return transaction.project.update({ where: { id: projectId }, data: { status: "FROZEN", frozenAt: new Date() } });
   });
-
-  if (result.count === 0) {
-    throw new ConflictError("Заморозить можно только активный проект.");
-  }
-
-  return prisma.project.findUniqueOrThrow({ where: { id: projectId } });
 }
 
-export async function resumeProjectForUser(userId: string, projectId: string) {
-  const result = await prisma.project.updateMany({
-    where: { id: projectId, userId, status: "FROZEN", deletedAt: null },
-    data: { status: "ACTIVE", frozenAt: null },
+export async function resumeProjectForUser(userId: string, role: string, projectId: string) {
+  return inProjectTransaction(projectId, async (transaction) => {
+    const project = await findProjectForOwnerOrAdmin(transaction, projectId, userId, isAdministrator(role));
+    if (!project || project.status !== "FROZEN") throw new ConflictError("Возобновить можно только замороженный проект.");
+    return transaction.project.update({ where: { id: projectId }, data: { status: "ACTIVE", frozenAt: null } });
+  });
+}
+
+/**
+ * Verifies that an administrator is requesting a confirmation code for an
+ * existing project. Role authorization is deliberately kept at the route
+ * boundary via requireAdmin().
+ */
+export async function requestProjectHardDeletion(projectId: string) {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, deletedAt: null },
+    select: { id: true },
   });
 
-  if (result.count === 0) {
-    throw new ConflictError("Возобновить можно только замороженный проект.");
+  if (!project) {
+    throw new NotFoundError("Проект");
   }
+}
 
-  return prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+/**
+ * Permanently removes a project and every record that belongs exclusively to
+ * it. Financial records, budget adjustments, and members are removed by the
+ * database cascades; tasks and audit history require explicit deletion.
+ */
+export async function hardDeleteProjectForAdmin(projectId: string) {
+  return inProjectTransaction(projectId, async (transaction) => {
+    const project = await transaction.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!project) {
+      throw new NotFoundError("Проект");
+    }
+
+    // These relations intentionally do not cascade from Project: tasks would
+    // otherwise be detached, and AuditLog has no foreign key by design.
+    await transaction.task.deleteMany({ where: { projectId } });
+    await transaction.auditLog.deleteMany({ where: { projectId } });
+
+    // PostgreSQL cascades this deletion to expenses, payments, budget
+    // adjustments, and project memberships in one atomic transaction.
+    await transaction.project.delete({ where: { id: projectId } });
+  });
 }

@@ -5,14 +5,14 @@ import { ConflictError, ForbiddenError, NotFoundError } from "@/server/shared/er
 
 import type { AddProjectMemberInput } from "./project-members.schema";
 
-async function findProjectForOwner(projectId: string, ownerId: string) {
+async function findProjectForOwner(projectId: string, ownerId: string, isAdmin: boolean) {
   const project = await prisma.project.findFirst({
-    where: { id: projectId, userId: ownerId, deletedAt: null },
+    where: { id: projectId, deletedAt: null, ...(isAdmin ? {} : { userId: ownerId }) },
     select: { id: true, userId: true },
   });
 
   if (!project) {
-    throw new ForbiddenError("Управлять участниками может только создатель проекта.");
+    throw new ForbiddenError("Управлять участниками может только создатель проекта или администратор.");
   }
 
   return project;
@@ -22,10 +22,11 @@ export async function addProjectMember(
   ownerId: string,
   projectId: string,
   input: AddProjectMemberInput,
+  isAdmin = false,
 ) {
-  await findProjectForOwner(projectId, ownerId);
+  const project = await findProjectForOwner(projectId, ownerId, isAdmin);
 
-  if (input.userId === ownerId) {
+  if (input.userId === project.userId) {
     throw new ConflictError("Создатель проекта уже имеет полный доступ.");
   }
 
@@ -46,8 +47,8 @@ export async function addProjectMember(
   });
 }
 
-export async function removeProjectMember(ownerId: string, projectId: string, memberId: string) {
-  await findProjectForOwner(projectId, ownerId);
+export async function removeProjectMember(ownerId: string, projectId: string, memberId: string, isAdmin = false) {
+  await findProjectForOwner(projectId, ownerId, isAdmin);
 
   const result = await prisma.projectMember.updateMany({
     where: { projectId, userId: memberId, deletedAt: null },

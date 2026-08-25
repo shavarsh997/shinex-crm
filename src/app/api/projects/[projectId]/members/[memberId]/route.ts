@@ -7,7 +7,7 @@ type ProjectMemberRouteContext = { params: Promise<{ projectId: string; memberId
 export const DELETE = withErrorHandling(async (_request, context: ProjectMemberRouteContext) => {
   const user = await requireUser();
   const { projectId, memberId } = await context.params;
-  await removeProjectMember(user.id, projectId, memberId);
+  await removeProjectMember(user.id, projectId, memberId, user.role === "ADMIN");
 
   return new Response(null, { status: 204 });
 });

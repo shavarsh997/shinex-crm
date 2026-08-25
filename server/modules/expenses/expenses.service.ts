@@ -53,8 +53,8 @@ async function normalizeExpenseUpdate(expense: NonNullable<Awaited<ReturnType<ty
   };
 }
 
-export async function getProjectExpensePage(userId: string, projectId: string, pagination: CursorPaginationInput, type: ExpenseType | undefined, sort: ExpenseListSort) {
-  const project = await findProjectForUser(prisma, projectId, userId);
+export async function getProjectExpensePage(userId: string, projectId: string, pagination: CursorPaginationInput, type: ExpenseType | undefined, sort: ExpenseListSort, isAdmin = false) {
+  const project = await findProjectForUser(prisma, projectId, userId, isAdmin);
   if (!project) throw new NotFoundError("Проект");
   const where = { projectId, deletedAt: null, ...(type ? { type } : {}) };
   const [expenses, totalCount] = await Promise.all([
@@ -64,9 +64,9 @@ export async function getProjectExpensePage(userId: string, projectId: string, p
   return { ...createCursorPage(expenses, pagination.limit), totalCount };
 }
 
-export async function addProjectExpense(userId: string, projectId: string, input: CreateExpenseInput) {
+export async function addProjectExpense(userId: string, projectId: string, input: CreateExpenseInput, isAdmin = false) {
   const payout = await inProjectTransaction(projectId, async (tx) => {
-    const project = await findProjectForEditor(tx, projectId, userId);
+    const project = await findProjectForEditor(tx, projectId, userId, isAdmin);
     if (!project) throw new NotFoundError("Проект");
     if (project.status !== "ACTIVE") throw new ConflictError("Нельзя добавлять расходы в неактивный проект.");
     const existing = await tx.expense.findUnique({ where: { clientRequestId: input.clientRequestId } });
@@ -86,11 +86,11 @@ export async function addProjectExpense(userId: string, projectId: string, input
   return payout.expense;
 }
 
-export async function updateProjectExpense(userId: string, expenseId: string, input: UpdateExpenseInput) {
-  const initial = await findExpenseForUser(prisma, expenseId, userId);
+export async function updateProjectExpense(userId: string, expenseId: string, input: UpdateExpenseInput, isAdmin = false) {
+  const initial = await findExpenseForUser(prisma, expenseId, userId, isAdmin);
   if (!initial) throw new NotFoundError("Расход");
   return inProjectTransaction(initial.projectId, async (tx) => {
-    const expense = await findExpenseForUser(tx, expenseId, userId);
+    const expense = await findExpenseForUser(tx, expenseId, userId, isAdmin);
     if (!expense) throw new NotFoundError("Расход");
     if (expense.project.status !== "ACTIVE") throw new ConflictError("Нельзя изменять расходы неактивного проекта.");
     const updatedExpense = await updateExpense(tx, expenseId, await normalizeExpenseUpdate(expense, input));
@@ -100,11 +100,11 @@ export async function updateProjectExpense(userId: string, expenseId: string, in
   });
 }
 
-export async function deleteProjectExpense(userId: string, expenseId: string) {
-  const initial = await findExpenseForUser(prisma, expenseId, userId);
+export async function deleteProjectExpense(userId: string, expenseId: string, isAdmin = false) {
+  const initial = await findExpenseForUser(prisma, expenseId, userId, isAdmin);
   if (!initial) throw new NotFoundError("Расход");
   return inProjectTransaction(initial.projectId, async (tx) => {
-    const expense = await findExpenseForUser(tx, expenseId, userId);
+    const expense = await findExpenseForUser(tx, expenseId, userId, isAdmin);
     if (!expense) throw new NotFoundError("Расход");
     if (expense.project.status !== "ACTIVE") throw new ConflictError("Нельзя удалять расходы неактивного проекта.");
     await deleteExpense(tx, expenseId);
@@ -113,11 +113,11 @@ export async function deleteProjectExpense(userId: string, expenseId: string) {
   });
 }
 
-export async function restoreProjectExpense(userId: string, expenseId: string) {
-  const initial = await findDeletedExpenseForUser(prisma, expenseId, userId);
+export async function restoreProjectExpense(userId: string, expenseId: string, isAdmin = false) {
+  const initial = await findDeletedExpenseForUser(prisma, expenseId, userId, isAdmin);
   if (!initial) throw new NotFoundError("Удалённый расход");
   return inProjectTransaction(initial.projectId, async (tx) => {
-    const expense = await findDeletedExpenseForUser(tx, expenseId, userId);
+    const expense = await findDeletedExpenseForUser(tx, expenseId, userId, isAdmin);
     if (!expense) throw new NotFoundError("Удалённый расход");
     if (expense.project.status !== "ACTIVE") throw new ConflictError("Восстановить расход можно только в активном проекте.");
     const restored = await tx.expense.update({ where: { id: expenseId }, data: { deletedAt: null } });

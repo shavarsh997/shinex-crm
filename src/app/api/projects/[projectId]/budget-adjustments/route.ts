@@ -11,7 +11,7 @@ export const GET = withErrorHandling(async (request, context: BudgetAdjustmentRo
   const user = await requireUser();
   const { projectId } = await context.params;
   const pagination = await parseSearchParams(request, cursorPaginationSchema);
-  const page = await getProjectBudgetAdjustmentPage(user.id, projectId, pagination);
+  const page = await getProjectBudgetAdjustmentPage(user.id, projectId, pagination, user.role === "ADMIN");
 
   return Response.json({
     adjustments: page.data.map((adjustment) => ({
@@ -29,7 +29,7 @@ export const POST = withErrorHandling(async (request, context: BudgetAdjustmentR
   const user = await requireUser();
   const { projectId } = await context.params;
   const input = await parseRequestBody(request, createBudgetAdjustmentSchema);
-  const adjustment = await addBudgetAdjustment(user.id, projectId, input);
+  const adjustment = await addBudgetAdjustment(user.id, projectId, input, user.role === "ADMIN");
 
   return Response.json({
     adjustment: {
