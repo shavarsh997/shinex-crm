@@ -89,7 +89,7 @@ function ResponsiveDialogContent({
   return (
     <DialogContent
       className={cn(
-        "!bottom-0 !top-auto max-h-[92vh] !max-w-none !translate-y-0 overflow-y-auto rounded-b-none rounded-t-[28px] sm:!top-1/2 sm:!bottom-auto sm:!max-w-lg sm:!-translate-y-1/2 sm:!rounded-[28px]",
+        "!bottom-0 !top-auto min-w-0 grid-cols-1 max-h-[92vh] !max-w-full !translate-y-0 overflow-y-auto rounded-b-none rounded-t-[28px] sm:!top-1/2 sm:!bottom-auto sm:!max-w-lg sm:!-translate-y-1/2 sm:!rounded-[28px]",
         className
       )}
       {...props}
