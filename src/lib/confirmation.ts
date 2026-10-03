@@ -18,6 +18,10 @@ export const confirmationActions = [
 
 export type ConfirmationAction = (typeof confirmationActions)[number];
 
+export function isConfirmationCode(value: unknown): value is string {
+  return typeof value === "string" && /^[1-9][0-9]{2}$/.test(value);
+}
+
 export function confirmationHeaders(code: string) {
   return { "X-Shinex-Confirmation-Code": code };
 }
@@ -34,9 +38,13 @@ export async function requestConfirmationCode(
   });
   const payload = await response.json().catch(() => null) as { phrase?: string; error?: { message?: string } } | null;
 
-  if (!response.ok || !payload?.phrase) {
+  if (!response.ok || !isConfirmationCode(payload?.phrase)) {
     throw new Error(payload?.error?.message || "Не удалось подготовить код подтверждения.");
   }
 
-  return window.prompt(prompt(payload.phrase))?.trim() || null;
+  const code = window.prompt(prompt(payload.phrase))?.trim() || null;
+  if (code && code !== payload.phrase) {
+    throw new Error("Код подтверждения не совпадает.");
+  }
+  return code;
 }

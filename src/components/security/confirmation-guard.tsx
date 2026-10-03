@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import type { ConfirmationAction } from "@/lib/confirmation";
+import { isConfirmationCode, type ConfirmationAction } from "@/lib/confirmation";
 import { useTranslations } from "@/i18n/provider";
 
 type Challenge = { action: ConfirmationAction; resourceId: string };
@@ -64,12 +64,13 @@ export function ConfirmationGuard() {
       });
       const payload = await response.json().catch(() => null) as { phrase?: string; error?: { message?: string } } | null;
 
-      if (!response.ok || !payload?.phrase) {
+      if (!response.ok || !isConfirmationCode(payload?.phrase)) {
         throw new Error(payload?.error?.message || t("confirmation.challengeFailed"));
       }
 
       const code = window.prompt(t("confirmation.prompt", { phrase: payload.phrase }))?.trim();
       if (!code) throw new Error(t("confirmation.cancelled"));
+      if (code !== payload.phrase) throw new Error(t("confirmation.invalidCode"));
 
       headers.set("X-Shinex-Confirmation-Code", code);
       return originalFetch(input, { ...init, headers });

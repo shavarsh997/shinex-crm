@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "@/i18n/provider";
-import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
+import { confirmationHeaders, isConfirmationCode, requestConfirmationCode } from "@/lib/confirmation";
 
 type ProjectStatus = "ACTIVE" | "FROZEN" | "COMPLETED";
 type Screen = "settings" | "complete-warning" | "complete-code" | "delete-warning" | "delete-code";
@@ -51,17 +51,18 @@ export function ProjectSettingsDialog({ projectId, status, completedAt, frozenAt
   }
 
   async function requestChallenge(flow: "complete" | "delete") {
-    setPending(true); setError(null);
+    setPending(true); setError(null); setInput(""); setPhrase("");
     try {
       const suffix = flow === "delete" ? "hard-delete-challenge" : "completion-challenge";
       const response = await fetch(`/api/projects/${projectId}/${suffix}`);
       const payload = await response.json().catch(() => null) as { phrase?: string; error?: { message?: string } } | null;
-      if (!response.ok || !payload?.phrase) throw new Error(payload?.error?.message || t("project.challengeFailed"));
+      if (!response.ok || !isConfirmationCode(payload?.phrase)) throw new Error(payload?.error?.message || t("project.challengeFailed"));
       setPhrase(payload.phrase); setScreen(flow === "delete" ? "delete-code" : "complete-code");
     } catch (caughtError) { setError(caughtError instanceof Error ? caughtError.message : t("project.challengeFailed")); } finally { setPending(false); }
   }
 
   async function submitConfirmation(flow: "complete" | "delete") {
+    if (pending || !isConfirmationCode(phrase) || input !== phrase) return;
     setPending(true); setError(null);
     try {
       const suffix = flow === "delete" ? "hard-delete" : "complete";
@@ -92,6 +93,6 @@ export function ProjectSettingsDialog({ projectId, status, completedAt, frozenAt
     </div>}
     {screen === "complete-warning" && <div className="mt-5"><div className="flex gap-3 rounded-2xl bg-amber-50 p-4 text-amber-900"><AlertTriangle className="mt-0.5 size-5 shrink-0" /><p className="text-sm leading-6">После завершения проект нельзя будет возобновить. Проверьте, что все операции уже внесены.</p></div>{error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}<div className="mt-6 flex justify-end gap-3"><Button type="button" variant="outline" className="rounded-xl" onClick={() => setScreen("settings")}>Назад</Button><Button type="button" variant="destructive" className="rounded-xl" disabled={pending} onClick={() => void requestChallenge("complete")}>{pending ? "Готовим…" : "Продолжить"}</Button></div></div>}
     {screen === "delete-warning" && <div className="mt-5"><div className="flex gap-3 rounded-2xl bg-red-50 p-4 text-red-950"><AlertTriangle className="mt-0.5 size-5 shrink-0" /><p className="text-sm leading-6">{t("project.deleteWarning")}</p></div>{error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}<div className="mt-6 flex justify-end gap-3"><Button type="button" variant="outline" className="rounded-xl" onClick={() => setScreen("settings")}>{t("form.back")}</Button><Button type="button" variant="destructive" className="rounded-xl" disabled={pending} onClick={() => void requestChallenge("delete")}>{pending ? t("project.preparing") : t("form.continue")}</Button></div></div>}
-    {(screen === "complete-code" || screen === "delete-code") && <div className="mt-5"><div className="rounded-2xl bg-slate-950 p-4 text-white"><div className="flex items-center gap-2 text-sm text-slate-300"><LockKeyhole className="size-4" />Код подтверждения</div><p className="mt-2 select-none font-mono text-lg font-bold tracking-[0.12em]">{phrase}</p></div><label className="mt-5 grid gap-2 text-sm font-semibold text-slate-700">Введите код полностью<Input autoComplete="off" autoCapitalize="characters" value={input} onChange={(event) => setInput(event.target.value.toUpperCase())} placeholder={phrase} className="h-12 rounded-xl font-mono tracking-wide" /></label>{error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}<div className="mt-6 flex justify-end gap-3"><Button type="button" variant="outline" className="rounded-xl" disabled={pending} onClick={() => setScreen("settings")}>Назад</Button><Button type="button" variant="destructive" className="rounded-xl" disabled={pending || input !== phrase} onClick={() => void submitConfirmation(isDeleteFlow ? "delete" : "complete")}>{pending ? (isDeleteFlow ? "Удаляем…" : "Завершаем…") : (isDeleteFlow ? "Удалить безвозвратно" : "Завершить проект")}</Button></div></div>}
+    {(screen === "complete-code" || screen === "delete-code") && <div className="mt-5"><div className="rounded-2xl bg-slate-950 p-4 text-white"><div className="flex items-center gap-2 text-sm text-slate-300"><LockKeyhole className="size-4" />{t("project.confirmationCode")}</div><p className="mt-2 select-none font-mono text-lg font-bold tracking-[0.12em]">{phrase}</p></div><label className="mt-5 grid gap-2 text-sm font-semibold text-slate-700">{t("project.enterConfirmationCode")}<Input autoComplete="off" inputMode="numeric" pattern="[0-9]{3}" maxLength={3} disabled={pending} value={input} onChange={(event) => setInput(event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="000" className="h-12 rounded-xl font-mono tracking-wide" /></label>{error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}<div className="mt-6 flex justify-end gap-3"><Button type="button" variant="outline" className="rounded-xl" disabled={pending} onClick={() => setScreen("settings")}>Назад</Button><Button type="button" variant="destructive" className="rounded-xl" disabled={pending || !isConfirmationCode(phrase) || input !== phrase} onClick={() => void submitConfirmation(isDeleteFlow ? "delete" : "complete")}>{pending ? (isDeleteFlow ? "Удаляем…" : "Завершаем…") : (isDeleteFlow ? "Удалить безвозвратно" : "Завершить проект")}</Button></div></div>}
   </ResponsiveDialogContent></Dialog>;
 }
