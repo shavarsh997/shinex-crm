@@ -26,10 +26,9 @@ export function confirmationHeaders(code: string) {
   return { "X-Shinex-Confirmation-Code": code };
 }
 
-export async function requestConfirmationCode(
+export async function requestConfirmationChallenge(
   action: ConfirmationAction,
   resourceId: string,
-  prompt: (phrase: string) => string,
 ) {
   const response = await fetch("/api/confirmation-challenge", {
     method: "POST",
@@ -42,8 +41,17 @@ export async function requestConfirmationCode(
     throw new Error(payload?.error?.message || "Не удалось подготовить код подтверждения.");
   }
 
-  const code = window.prompt(prompt(payload.phrase))?.trim() || null;
-  if (code && code !== payload.phrase) {
+  return payload.phrase;
+}
+
+export async function requestConfirmationCode(
+  action: ConfirmationAction,
+  resourceId: string,
+  prompt: (phrase: string) => string,
+) {
+  const phrase = await requestConfirmationChallenge(action, resourceId);
+  const code = window.prompt(prompt(phrase))?.trim() || null;
+  if (code && code !== phrase) {
     throw new Error("Код подтверждения не совпадает.");
   }
   return code;
