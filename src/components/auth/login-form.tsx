@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { isTelegramMiniApp } from "@/components/telegram/telegram-web-app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useActionLock } from "@/hooks/use-action-lock";
 import { useTranslations } from "@/i18n/provider";
 
 type LoginMode = "sign-in" | "register";
@@ -17,18 +18,20 @@ export function LoginForm({ accessDenied = false }: { accessDenied?: boolean }) 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const actionLock = useActionLock();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!actionLock.acquire()) return;
     setIsPending(true);
     setError(null);
     setNotice(null);
 
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "");
-    const password = String(formData.get("password") ?? "");
-
     try {
+      const formData = new FormData(event.currentTarget);
+      const email = String(formData.get("email") ?? "");
+      const password = String(formData.get("password") ?? "");
+
       if (mode === "register") {
         const response = await fetch("/api/auth/register", {
           method: "POST",
@@ -73,11 +76,13 @@ export function LoginForm({ accessDenied = false }: { accessDenied?: boolean }) 
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : t("auth.signInFailed"));
     } finally {
+      actionLock.release();
       setIsPending(false);
     }
   }
 
   function changeMode(nextMode: LoginMode) {
+    if (actionLock.isLocked()) return;
     setMode(nextMode);
     setError(null);
     setNotice(null);
@@ -88,17 +93,17 @@ export function LoginForm({ accessDenied = false }: { accessDenied?: boolean }) 
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 rounded-lg bg-muted p-1 text-sm">
-        <button type="button" onClick={() => changeMode("sign-in")} className={`rounded-md px-3 py-1.5 ${!isRegistering ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}>{t("auth.signIn")}</button>
-        <button type="button" onClick={() => changeMode("register")} className={`rounded-md px-3 py-1.5 ${isRegistering ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}>{t("auth.register")}</button>
+        <button type="button" disabled={isPending} onClick={() => changeMode("sign-in")} className={`rounded-md px-3 py-1.5 ${!isRegistering ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}>{t("auth.signIn")}</button>
+        <button type="button" disabled={isPending} onClick={() => changeMode("register")} className={`rounded-md px-3 py-1.5 ${isRegistering ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}>{t("auth.register")}</button>
       </div>
       <p className="text-sm text-muted-foreground">{isRegistering ? t("auth.registerHint") : t("auth.signInHint")}</p>
       {(accessDenied || error) && <p role="alert" className="text-sm text-destructive">{error || t("auth.accessDenied")}</p>}
       {notice && <p role="status" className="text-sm text-primary">{notice}</p>}
       <form className="grid gap-3" onSubmit={submit}>
-        {isRegistering && <label className="grid gap-1 text-sm font-medium">{t("auth.name")}<Input name="name" autoComplete="name" required minLength={2} maxLength={100} /></label>}
-        <label className="grid gap-1 text-sm font-medium">{t("auth.email")}<Input name="email" type="email" autoComplete="email" required maxLength={320} /></label>
-        <label className="grid gap-1 text-sm font-medium">{t("auth.password")}<Input name="password" type="password" autoComplete={isRegistering ? "new-password" : "current-password"} required minLength={6} maxLength={50} /></label>
-        <Button type="submit" size="lg" className="mt-3" disabled={isPending}>{isPending ? t("auth.wait") : isRegistering ? t("auth.createAccount") : t("auth.signIn")}</Button>
+        {isRegistering && <label className="grid gap-1 text-sm font-medium">{t("auth.name")}<Input name="name" autoComplete="name" disabled={isPending} required minLength={2} maxLength={100} /></label>}
+        <label className="grid gap-1 text-sm font-medium">{t("auth.email")}<Input name="email" type="email" autoComplete="email" disabled={isPending} required maxLength={320} /></label>
+        <label className="grid gap-1 text-sm font-medium">{t("auth.password")}<Input name="password" type="password" autoComplete={isRegistering ? "new-password" : "current-password"} disabled={isPending} required minLength={6} maxLength={50} /></label>
+        <Button type="submit" size="lg" className="mt-3" loading={isPending} disabled={isPending}>{isPending ? t("auth.wait") : isRegistering ? t("auth.createAccount") : t("auth.signIn")}</Button>
       </form>
     </div>
   );

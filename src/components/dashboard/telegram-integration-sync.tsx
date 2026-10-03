@@ -1,9 +1,10 @@
 "use client";
 
-import { RefreshCw, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useActionLock } from "@/hooks/use-action-lock";
 
 type SyncResult = {
   configured: boolean;
@@ -19,10 +20,12 @@ type SyncResult = {
 
 export function TelegramIntegrationSync() {
   const [pending, setPending] = useState(false);
+  const actionLock = useActionLock();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function synchronize() {
+    if (!actionLock.acquire()) return;
     setPending(true);
     setMessage(null);
     setError(null);
@@ -49,6 +52,7 @@ export function TelegramIntegrationSync() {
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Не удалось синхронизировать Telegram.");
     } finally {
+      actionLock.release();
       setPending(false);
     }
   }
@@ -60,8 +64,8 @@ export function TelegramIntegrationSync() {
           <p className="text-sm font-medium">Telegram Mini App</p>
           <p className="mt-1 text-sm text-muted-foreground">После смены домена или деплоя обновите кнопку и сбросьте сохранённые адреса в чатах.</p>
         </div>
-        <Button type="button" variant="outline" onClick={() => void synchronize()} disabled={pending}>
-          {pending ? <RefreshCw className="size-4 animate-spin" /> : <Send className="size-4" />}
+        <Button type="button" variant="outline" onClick={() => void synchronize()} disabled={pending} loading={pending}>
+          <Send className="size-4" />
           {pending ? "Синхронизируем…" : "Синхронизировать Telegram"}
         </Button>
       </div>

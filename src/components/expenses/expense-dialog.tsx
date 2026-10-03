@@ -7,6 +7,7 @@ import { CalendarDays, Plus, ReceiptText, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, ResponsiveDialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useActionLock } from "@/hooks/use-action-lock";
 import { useTranslations } from "@/i18n/provider";
 import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 import type { EmployeeOption, ExpenseView } from "./expense-list";
@@ -14,6 +15,7 @@ import type { EmployeeOption, ExpenseView } from "./expense-list";
 export function ExpenseDialog({ projectId, employees, expense, open, onOpenChange, compact = false }: { projectId: string; employees: EmployeeOption[]; expense?: ExpenseView; open?: boolean; onOpenChange?: (open: boolean) => void; compact?: boolean }) {
   const { t } = useTranslations();
   const router = useRouter();
+  const actionLock = useActionLock();
   const [internalOpen, setInternalOpen] = useState(false);
   const [type, setType] = useState<ExpenseView["type"]>(expense?.type ?? "MATERIAL");
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function ExpenseDialog({ projectId, employees, expense, open, onOpenChang
   }
 
   async function submit(data: FormData) {
+    if (!actionLock.acquire()) return;
     setError(null);
     setPending(true);
     try {
@@ -49,11 +52,12 @@ export function ExpenseDialog({ projectId, employees, expense, open, onOpenChang
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : t("expense.saveFailed"));
     } finally {
+      actionLock.release();
       setPending(false);
     }
   }
 
-  return <Dialog open={isOpen} onOpenChange={changeOpen}>
+  return <Dialog open={isOpen} onOpenChange={(nextOpen) => { if (!actionLock.isLocked()) changeOpen(nextOpen); }}>
     {!expense && <DialogTrigger render={<Button size={compact ? "icon" : "lg"} className={compact ? "size-12 rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-900/20 dark:bg-primary dark:text-primary-foreground" : "h-12 rounded-2xl bg-slate-950 px-4 text-sm text-white shadow-lg shadow-slate-900/15 dark:bg-primary dark:text-primary-foreground"} />}><Plus className="size-4" />{!compact && t("expense.add")}</DialogTrigger>}
     <ResponsiveDialogContent className="gap-5 p-5 pb-8 sm:p-7">
       <DialogHeader><DialogTitle className="text-xl tracking-[-0.035em]">{expense ? t("expense.edit") : t("expense.new")}</DialogTitle><DialogDescription>{isSalary ? t("expense.salaryDescription") : t("expense.defaultDescription")}</DialogDescription></DialogHeader>
@@ -67,7 +71,7 @@ export function ExpenseDialog({ projectId, employees, expense, open, onOpenChang
         <label className="grid gap-2 text-sm font-semibold text-slate-700">{t("common.date")}<div className="relative"><Input required name="date" type="date" defaultValue={date} className="h-12 rounded-2xl border-slate-200 px-4" /><CalendarDays className="pointer-events-none absolute right-4 top-3.5 size-5 text-slate-400" /></div></label>
         <details className="rounded-2xl bg-slate-50 p-4"><summary className="cursor-pointer text-sm font-semibold text-slate-700">{t("expense.vendorDetails")}</summary><div className="mt-4 grid gap-4">{!isSalary && <label className="grid gap-1.5 text-sm font-medium">{t("expense.vendor")}<Input name="vendorName" defaultValue={expense?.vendorName || ""} className="h-11 rounded-xl border-slate-200" /></label>}{isSalary && <Input name="vendorName" defaultValue="" className="hidden" />}<label className="grid gap-1.5 text-sm font-medium">{t("expense.comment")}<textarea name="description" defaultValue={expense?.description || ""} rows={2} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-blue-100" /></label><Input name="notes" defaultValue={expense?.notes || ""} className="hidden" /></div></details>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" size="lg" className="h-13 rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700" disabled={pending}>{pending ? t("common.saving") : expense ? t("payment.saveChanges") : t("expense.save")}</Button>
+        <Button type="submit" size="lg" className="h-13 rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700" loading={pending} disabled={pending}>{pending ? t("common.saving") : expense ? t("payment.saveChanges") : t("expense.save")}</Button>
       </form>
     </ResponsiveDialogContent>
   </Dialog>;

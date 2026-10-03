@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/users/user-avatar";
+import { useActionLock } from "@/hooks/use-action-lock";
 import { confirmationHeaders, requestConfirmationCode } from "@/lib/confirmation";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
@@ -99,6 +100,9 @@ export function AccessManagement({ currentUserId, users }: {
     })),
   );
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingApprovalStatus, setPendingApprovalStatus] = useState<ApprovalStatus | null>(null);
+  const actionLock = useActionLock();
+  const pending = pendingUserId !== null;
   const [error, setError] = useState<string | null>(null);
   const statusCounts = rows.reduce<Record<ApprovalStatus, number>>(
     (counts, user) => ({ ...counts, [user.approvalStatus]: counts[user.approvalStatus] + 1 }),
@@ -106,13 +110,16 @@ export function AccessManagement({ currentUserId, users }: {
   );
 
   function updateDraft(userId: string, changes: Partial<EditableUser>) {
+    if (actionLock.isLocked()) return;
     setRows((current) => current.map((user) => (
       user.id === userId ? { ...user, ...changes } : user
     )));
   }
 
   async function save(user: EditableUser, approvalStatus: ApprovalStatus) {
+    if (!actionLock.acquire()) return;
     setPendingUserId(user.id);
+    setPendingApprovalStatus(approvalStatus);
     setError(null);
 
     try {
@@ -142,7 +149,9 @@ export function AccessManagement({ currentUserId, users }: {
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Не удалось обновить доступ.");
     } finally {
+      actionLock.release();
       setPendingUserId(null);
+      setPendingApprovalStatus(null);
     }
   }
 
@@ -193,7 +202,7 @@ export function AccessManagement({ currentUserId, users }: {
                 Роль после одобрения
                 <select
                   value={user.role}
-                  disabled={isCurrentUser || isSaving}
+                  disabled={isCurrentUser || pending}
                   onChange={(event) => updateDraft(user.id, { role: event.target.value as UserRole })}
                   className="h-9 rounded-lg border bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -204,7 +213,7 @@ export function AccessManagement({ currentUserId, users }: {
                 Сообщение пользователю
                 <input
                   value={user.approvalNote ?? ""}
-                  disabled={isCurrentUser || isSaving}
+                  disabled={isCurrentUser || pending}
                   onChange={(event) => updateDraft(user.id, { approvalNote: event.target.value || null })}
                   className="h-9 rounded-lg border bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Например: доступ одобрен, добро пожаловать"
@@ -220,17 +229,19 @@ export function AccessManagement({ currentUserId, users }: {
                 <div className="flex flex-wrap gap-2">
                   {actionsForStatus(user.approvalStatus).map((action) => {
                     const ActionIcon = action.icon;
+                    const isActiveAction = isSaving && pendingApprovalStatus === action.status;
 
                     return (
                       <Button
                         key={action.status}
                         size="sm"
                         variant={action.variant}
-                        disabled={isSaving}
+                        disabled={pending}
+                        loading={isActiveAction}
                         onClick={() => save(user, action.status)}
                       >
                         <ActionIcon aria-hidden="true" />
-                        {isSaving ? "Сохраняем…" : action.label}
+                        {isActiveAction ? "Сохраняем…" : action.label}
                       </Button>
                     );
                   })}
