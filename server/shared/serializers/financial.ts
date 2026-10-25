@@ -1,6 +1,17 @@
 import "server-only";
 
-import type { Expense, Payment, Project } from "@/server/generated/prisma/client";
+import type { Expense, ExternalFundEntry, Payment, Project } from "@/server/generated/prisma/client";
+
+export function serializeExternalFundEntry(entry: ExternalFundEntry) {
+  return {
+    ...entry,
+    amount: entry.amount.toString(),
+    date: entry.date.toISOString(),
+    deletedAt: entry.deletedAt?.toISOString() ?? null,
+    createdAt: entry.createdAt.toISOString(),
+    updatedAt: entry.updatedAt.toISOString(),
+  };
+}
 
 export function serializeProject(project: Project) {
   return {
