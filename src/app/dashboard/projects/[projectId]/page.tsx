@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, PauseCircle, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, CheckCircle2, PauseCircle } from "lucide-react";
 
 import { ProjectMembers } from "@/components/projects/project-members";
 import { ProjectEditDialog } from "@/components/projects/project-edit-dialog";
 import { ProjectSettingsDialog } from "@/components/projects/project-settings-dialog";
 import { getAuthenticatedUser } from "@/server/auth";
 import { getUserProject } from "@/server/modules/projects/projects.service";
+import { getProjectExternalFunds } from "@/server/modules/external-funds/external-funds.service";
 import { getApprovedUsersForProjectAccess } from "@/server/modules/users/users.service";
 import { NotFoundError } from "@/server/shared/errors";
 import { getTranslations } from "@/i18n/server";
@@ -16,9 +17,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
   const user = await getAuthenticatedUser();
   const { projectId } = await params;
   let project;
+  let externalFunds;
 
   try {
-    project = await getUserProject(user.id, user.role, projectId);
+    const [projectResult, fundsResult] = await Promise.all([
+      getUserProject(user.id, user.role, projectId),
+      getProjectExternalFunds(user.id, user.role, projectId),
+    ]);
+    project = projectResult;
+    externalFunds = fundsResult.totals;
   } catch (error) {
     if (error instanceof NotFoundError) notFound();
     throw error;
@@ -40,9 +47,28 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     <div className="mt-5"><div className="flex flex-wrap items-center gap-2"><p className="text-xs text-slate-400">{t("project.detail")}</p>{statusLabel && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${project.status === "COMPLETED" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-700"}`}>{project.status === "COMPLETED" ? <CheckCircle2 className="size-3" /> : <PauseCircle className="size-3" />}{statusLabel}</span>}</div><h1 className="mt-3 text-[28px] font-semibold tracking-[-0.05em] text-slate-950">{project.title}</h1><p className="mt-1 text-sm text-slate-500">{project.description || project.ownerName || t("project.details")}</p></div>
     <section className="mt-6 overflow-hidden rounded-[24px] bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-5 text-white shadow-[0_16px_36px_rgba(15,23,42,0.22)]"><p className="text-sm font-medium text-blue-100">{t("project.projectBudget")}</p><p className="mt-2 text-3xl font-semibold tracking-[-0.06em]">{money(project.estimatedAmount)}</p><div className="mt-6 grid grid-cols-3 gap-3 border-t border-white/10 pt-4"><div><p className="text-[10px] text-slate-400">{t("project.received")}</p><p className="mt-1 text-xs font-semibold leading-5">{money(project.receivedAmount)}</p></div><div><p className="text-[10px] text-slate-400">{t("project.spent")}</p><p className="mt-1 text-xs font-semibold leading-5">{money(project.spentAmount)}</p></div><div><p className="text-[10px] text-slate-400">{t("project.remaining")}</p><p className="mt-1 text-xs font-semibold leading-5">{money(remaining)}</p></div></div><div className="mt-5"><div className="mb-2 flex justify-between text-[11px] text-slate-300"><span>{t("project.budgetUsed")}</span><span className="font-semibold text-white">{spentRatio}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-blue-400" style={{ width: `${spentRatio}%` }} /></div></div></section>
     <section className="mt-7"><div className="mb-3"><h2 className="text-base font-semibold tracking-[-0.02em] text-slate-950">{t("project.finances")}</h2><p className="mt-1 text-sm text-slate-500">{t("project.financesDescription")}</p></div><div className="grid gap-3 sm:grid-cols-3">{cards.map((card) => <Link key={card.href} href={`/dashboard/projects/${project.id}/${card.href}`} className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-300"><div className="flex items-start justify-between gap-3"><p className="text-xs text-slate-400">{card.label}</p><span className={`grid size-7 place-items-center rounded-full bg-slate-50 text-slate-400 transition ${card.accent}`}><ArrowUpRight className="size-4" /></span></div><p className="mt-1 font-semibold text-slate-900">{money(card.value)}</p><p className="mt-1 text-xs text-slate-500">{card.detail}</p></Link>)}</div></section>
-    <Link href={`/dashboard/projects/${project.id}/external-funds`} className="mt-4 flex items-start gap-3 rounded-2xl bg-violet-500/5 p-5 ring-1 ring-violet-500/20 transition hover:bg-violet-500/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-violet-300">
-      <WalletCards className="mt-1 size-5 shrink-0 text-violet-600 dark:text-violet-400" />
-      <div className="min-w-0 flex-1"><h2 className="font-semibold">{t("externalFunds.title")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("externalFunds.description")}</p><p className="mt-3 text-sm font-medium text-violet-700 dark:text-violet-300">{t("externalFunds.open")}</p></div><ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+    <Link href={`/dashboard/projects/${project.id}/external-funds`} aria-label={`${t("externalFunds.title")} — ${t("externalFunds.all")}`} className="group mt-4 block overflow-hidden rounded-2xl bg-card text-card-foreground shadow-sm ring-1 ring-border transition hover:shadow-md hover:ring-foreground/20 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted"><Banknote aria-hidden="true" className="size-5 text-muted-foreground" /></span>
+          <div><h2 className="text-sm font-semibold sm:text-base">{t("externalFunds.title")}</h2><p className="mt-0.5 text-xs text-muted-foreground">{t("externalFunds.cardDescription")}</p></div>
+        </div>
+        <span className="flex shrink-0 items-center gap-2 rounded-lg bg-muted px-2.5 py-2 text-xs font-medium transition group-hover:bg-foreground group-hover:text-background"><span className="hidden sm:inline">{t("externalFunds.all")}</span><ArrowRight aria-hidden="true" className="size-4" /></span>
+      </div>
+      <dl className="grid grid-cols-2 sm:grid-cols-3">
+        <div className="min-w-0 border-r border-border p-4 sm:p-5">
+          <dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><ArrowDownLeft aria-hidden="true" className="size-3.5 text-emerald-600 dark:text-emerald-400" />{t("externalFunds.incomes")}</dt>
+          <dd className="mt-2 break-words text-base font-semibold tracking-tight tabular-nums sm:text-lg">{money(externalFunds.received)}</dd>
+        </div>
+        <div className="min-w-0 p-4 sm:border-r sm:border-border sm:p-5">
+          <dt className="flex items-center gap-1.5 text-xs text-muted-foreground"><ArrowUpRight aria-hidden="true" className="size-3.5 text-amber-600 dark:text-amber-400" />{t("externalFunds.expenses")}</dt>
+          <dd className="mt-2 break-words text-base font-semibold tracking-tight tabular-nums sm:text-lg">{money(externalFunds.spent)}</dd>
+        </div>
+        <div className="col-span-2 min-w-0 border-t border-border bg-muted/40 p-4 sm:col-span-1 sm:border-t-0 sm:p-5">
+          <dt className="text-xs text-muted-foreground">{t("externalFunds.cardBalance")}</dt>
+          <dd className={`mt-2 break-words text-xl font-semibold tracking-tight tabular-nums ${externalFunds.balance < 0n ? "text-destructive" : ""}`}>{money(externalFunds.balance)}</dd>
+        </div>
+      </dl>
     </Link>
     <ProjectMembers projectId={project.id} owner={project.user} members={project.members} availableUsers={availableUsers} canManage={project.canManageMembers} />
   </div>;

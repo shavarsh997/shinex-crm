@@ -2,6 +2,8 @@ import type { Locale } from "./config";
 
 const ru = {
   "externalFunds.title": "Сторонние средства",
+  "externalFunds.cardDescription": "Материалы и покупки вне сметы",
+  "externalFunds.cardBalance": "Остаток средств",
   "externalFunds.description": "Отдельные деньги на материалы и другие покупки для этого проекта, вне строительной сметы.",
   "externalFunds.open": "Открыть учёт",
   "externalFunds.received": "Получено сторонних денег",
@@ -408,6 +410,8 @@ type TranslationDictionary = Record<TranslationKey, string>;
 
 const hy: TranslationDictionary = {
   "externalFunds.title": "Լրացուցիչ միջոցներ",
+  "externalFunds.cardDescription": "Նյութեր և գնումներ՝ նախահաշվից դուրս",
+  "externalFunds.cardBalance": "Միջոցների մնացորդ",
   "externalFunds.description": "Այս նախագծի նյութերի և այլ գնումների համար առանձին գումարներ՝ շինարարական նախահաշվից դուրս։",
   "externalFunds.open": "Բացել հաշվառումը",
   "externalFunds.received": "Ստացված լրացուցիչ գումար",
